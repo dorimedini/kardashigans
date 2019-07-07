@@ -3,6 +3,16 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# General
+*.ini
+
+# Unwanted Kardashinanigans
+*RESULTS/
+*MODELS/
+
+# PyCharm
+.idea/
+
 # C extensions
 *.so
 
