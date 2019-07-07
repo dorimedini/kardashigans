@@ -51,20 +51,14 @@ class Baseline:
             os.mkdir(self._models_dir)
         self._print("Test dir setup complete")
 
-    def _save_model(self, model, name):
-        # TODO: Use Gal's stuff
-        model_prefix = self._models_dir + name
-        with open(model_prefix + ".json", "w") as json_file:
-            json_file.write(model.to_json())
-        model.save_weights(model_prefix + ".h5")
+    def _get_model_filepath(self, dataset_name):
+        return self._models_dir + name
+
+    def _save_model(self, model, name, weights_only=False):
+        utils.save_model(model, filepath=self._get_model_filepath(name), weights_only=weights_only)
 
     def _load_model(self, name):
-        # TODO: Use Gal's stuff
-        model_prefix = self._models_dir + name
-        with open(model_prefix + ".json", 'r') as json_file:
-            loaded_model_json = json_file.read()
-        loaded_model = model_from_json(loaded_model_json)
-        loaded_model.load_weights(model_prefix + ".h5")
+        return utils.load_model(self._get_model_filepath(name))
 
     def _generate_heatmap(self, data, row_labels, col_labels, filename):
         self._print("Generating heatmap. Data: {}".format(data))
