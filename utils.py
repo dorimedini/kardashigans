@@ -3,10 +3,9 @@ from keras import backend as K
 from keras import optimizers
 import numpy as np
 from keras.datasets import mnist, cifar10
-from keras.models import Sequential
+from keras.models import Sequential, load_model, Model
 from keras.layers import Activation, Dense, BatchNormalization, Input, Dropout, Concatenate, Flatten
 from keras.utils import to_categorical, Sequence, plot_model
-from keras.models import Model, Sequential
 from keras.layers.merge import add
 from keras.callbacks import Callback, ModelCheckpoint
 from keras.applications.resnet50 import ResNet50
@@ -56,7 +55,7 @@ def save_model(model, filepath, weights_only=False):
         model.save_weights(filepath, overwrite=True)
     else:
         model.save(filepath, overwrite=True)
-# TODO: Copy the load_model function
+# load_model is just imported from keras.models
 
 
 def get_layers_weights(model):
