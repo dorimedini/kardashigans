@@ -21,19 +21,19 @@ class FCTrainer:
                  optimizer=optimizers.SGD(momentum=0.9, nesterov=True),
                  loss='sparse_categorical_crossentropy',
                  metrics=['accuracy']):
-        """ Args:
-                dataset: keras.datasets.mnist, for example
-                verbose: Logging on / off
-                n_layers: Number of layers in the FCN
-                n_classes: Number of output classes
-                n_neurons: Number of neurons per inner layer
-                epochs: Number of epochs to train
-                batch_size: Number of samples per batch
-                activation: Activation function of inner nodes
-                output_activation: Activation function of the output layer
-                optimizer: Optimizer used when fitting
-                loss: Loss used when fitting
-                metrics: By which to score
+        """
+        :param dataset: keras.datasets.mnist, for example
+        :param verbose: Logging on / off
+        :param n_layers: Number of layers in the FCN
+        :param n_classes: Number of output classes
+        :param n_neurons: Number of neurons per inner layer
+        :param epochs: Number of epochs to train
+        :param batch_size: Number of samples per batch
+        :param activation: Activation function of inner nodes
+        :param output_activation: Activation function of the output layer
+        :param optimizer: Optimizer used when fitting
+        :param loss: Loss used when fitting
+        :param metrics: By which to score
         """
         self._dataset = dataset
         self._verbose = verbose
@@ -157,13 +157,13 @@ class FCFreezeTrainer(FCTrainer):
         freezing and weight initialization.
     """
     def __init__(self, layers_to_freeze=[], weight_map={}, **kwargs):
-        """ Args:
-                layers_to_freeze: Optional list of layer indexes to set to
-                    'untrainable', i.e. their weights cannot change during
-                    training.
-                weight_map: Optional. Maps layer indexes to initial weight
-                    values to use (instead of random init). Intended for use
-                    with frozen layers.
+        """
+        :param layers_to_freeze: Optional list of layer indexes to set to
+            'untrainable', i.e. their weights cannot change during
+            training.
+        :param weight_map: Optional. Maps layer indexes to initial weight
+            values to use (instead of random init). Intended for use
+            with frozen layers.
         """
         super(FCFreezeTrainer, self).__init__(**kwargs)
         self._layers_to_freeze = layers_to_freeze
