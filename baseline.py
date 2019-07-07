@@ -80,7 +80,7 @@ class Baseline:
         if name == 'mnist':
             return 100
         elif name == 'cifar10':
-            return 1000
+            return 100
 
     @staticmethod
     def get_dataset_n_layers(dataset):
