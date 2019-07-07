@@ -2,6 +2,7 @@ from datetime import datetime
 from google.colab import drive
 from keras import optimizers
 from keras.models import model_from_json
+from trainer import FCTrainer
 import matplotlib.pylab as plt
 import os
 import pytz
@@ -115,13 +116,13 @@ class Baseline:
                 self._trained_datasets[dataset_name] = self._load_model(filepath=filepath)
             else:
                 self._print("Fitting dataset {}".format(dataset_name))
-                fdf = utils.FrozenDenseFit(dataset=dataset,
-                                           verbose=self._verbose,
-                                           epochs=Baseline.get_dataset_n_epochs(dataset),
-                                           n_layers=Baseline.get_dataset_n_layers(dataset),
-                                           batch_size=Baseline.get_dataset_batch_size(dataset),
-                                           optimizer=Baseline.get_dataset_optimizer(dataset))
-                model = fdf.go()
+                trainer = FCTrainer(dataset=dataset,
+                                    verbose=self._verbose,
+                                    epochs=Baseline.get_dataset_n_epochs(dataset),
+                                    n_layers=Baseline.get_dataset_n_layers(dataset),
+                                    batch_size=Baseline.get_dataset_batch_size(dataset),
+                                    optimizer=Baseline.get_dataset_optimizer(dataset))
+                model = trainer.go()
                 self._trained_datasets[dataset_name] = model
         else:
             self._print("Already trained model for {}, returning it".format(dataset_name))
