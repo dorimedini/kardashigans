@@ -13,15 +13,22 @@ import utils
 # Baseline results: CIFAR and MNIST on 4-layer FC nets.
 # If only_on_datasets contains a list of datasets, then
 # the baseline results are only tested on those datasets.
-# TODO: Allow load from existing model
+#
+# trained_model_names expects a map from model names (like
+# 'mnist' or 'cifar10') to filepaths relative to the root
+# directory (root_dir). For example:
+# {'cifar10': '/baseline/07_07_2019___08_00_00/phase2_cifar10.h5',
+#  'mnist':  '/baseline/07_07_2019___08_00_00/phase1_mnist.h5'}
 class Baseline:
     def __init__(self,
                  verbose=False,
-                 only_on_datasets=None):
+                 only_on_datasets=None,
+                 trained_model_names=None):
         random.seed()  # Won't need this when we replace the stub _check_robustness
         drive.mount('/content/drive')
         self._verbose = verbose
         self._datasets = only_on_datasets if only_on_datasets else [utils.mnist, utils.cifar10]
+        self._trained_names = trained_model_names if trained_model_names else {}
         self._trained_datasets = {}
         self._setup_env()
 
@@ -51,14 +58,11 @@ class Baseline:
             os.mkdir(self._models_dir)
         self._print("Test dir setup complete")
 
-    def _get_model_filepath(self, dataset_name):
-        return self._models_dir + name
-
     def _save_model(self, model, name, weights_only=False):
-        utils.save_model(model, filepath=self._get_model_filepath(name), weights_only=weights_only)
+        utils.save_model(model, filepath=self._models_dir + name, weights_only=weights_only)
 
-    def _load_model(self, name):
-        return utils.load_model(self._get_model_filepath(name))
+    def _load_model(self, filepath):
+        return utils.load_model(filepath)
 
     def _generate_heatmap(self, data, row_labels, col_labels, filename):
         self._print("Generating heatmap. Data: {}".format(data))
@@ -106,15 +110,19 @@ class Baseline:
         dataset_name = utils.get_dataset_name(dataset)
         # Return previously trained model, no need to train twice
         if dataset_name not in self._trained_datasets:
-            self._print("Fitting dataset {}".format(dataset_name))
-            fdf = utils.FrozenDenseFit(dataset=dataset,
-                                       verbose=self._verbose,
-                                       epochs=Baseline.get_dataset_n_epochs(dataset),
-                                       n_layers=Baseline.get_dataset_n_layers(dataset),
-                                       batch_size=Baseline.get_dataset_batch_size(dataset),
-                                       optimizer=Baseline.get_dataset_optimizer(dataset))
-            model = fdf.go()
-            self._trained_datasets[dataset_name] = model
+            if dataset_name in self._trained_names:
+                filepath = self._trained_names[dataset_name]
+                self._trained_datasets[dataset_name] = self._load_model(filepath=filepath)
+            else:
+                self._print("Fitting dataset {}".format(dataset_name))
+                fdf = utils.FrozenDenseFit(dataset=dataset,
+                                           verbose=self._verbose,
+                                           epochs=Baseline.get_dataset_n_epochs(dataset),
+                                           n_layers=Baseline.get_dataset_n_layers(dataset),
+                                           batch_size=Baseline.get_dataset_batch_size(dataset),
+                                           optimizer=Baseline.get_dataset_optimizer(dataset))
+                model = fdf.go()
+                self._trained_datasets[dataset_name] = model
         else:
             self._print("Already trained model for {}, returning it".format(dataset_name))
         return self._trained_datasets[dataset_name]
