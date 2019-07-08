@@ -1,6 +1,5 @@
 from datetime import datetime
 from experiment import Experiment
-from google.colab import drive
 from keras import optimizers
 from keras.models import model_from_json
 from trainer import FCTrainer
@@ -22,12 +21,9 @@ class Baseline(Experiment):
     (by epoch) when testing robustness.
     """
     def __init__(self, verbose=False, trained_paths={}):
-        trainers = {'phase1_mnist': Baseline.construct_dataset_trainer(utils.mnist, verbose),
-                    'phase2_mnist': Baseline.construct_dataset_trainer(utils.mnist, verbose),
-                    'phase1_cifar10': Baseline.construct_dataset_trainer(utils.cifar10, verbose),
-                    'phase2_cifar10': Baseline.construct_dataset_trainer(utils.cifar10, verbose)}
+        trainers = {'mnist': Baseline.construct_dataset_trainer(utils.mnist, verbose),
+                    'cifar10': Baseline.construct_dataset_trainer(utils.cifar10, verbose)}
         # Map model names to dataset names on which they run ('phase1_mnist' -> 'mnist')
-        self._model_dataset_names = {name: name[name.rfind("_") + 1:] for name in trainers.keys()}
         random.seed()  # Won't need this when we replace the stub _check_robustness
         super(Baseline, self).__init__(name='Baseline',
                                        model_names=trainers.keys(),
@@ -125,10 +121,9 @@ class Baseline(Experiment):
         # taken.
         for model_name in self._model_names:
             self._print("Running phase2 on {}".format(model_name))
-            dataset_name = self._model_dataset_names[model_name]
             data = []
             rows = []
-            for layer in range(Baseline.get_dataset_n_layers(dataset_name)):
+            for layer in range(Baseline.get_dataset_n_layers(model_name)):
                 data += [self._phase2_dataset_robustness_by_epoch(model_name, layer)]
                 rows += ["Layer {}".format(layer)]
             n_cols = len(data[0])
@@ -139,7 +134,7 @@ class Baseline(Experiment):
             self.generate_heatmap(data=data,
                                   row_labels=rows,
                                   col_labels=["Epoch {}".format(e) for e in utils.get_epoch_checkpoints()],
-                                  filename="{}_heatmap.png".format(model_name))
+                                  filename="phase2_{}_heatmap.png".format(model_name))
 
     def go(self):
         self.phase1()
