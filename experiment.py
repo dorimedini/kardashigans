@@ -3,7 +3,7 @@ import matplotlib.pylab as plt
 import os
 import pytz
 import seaborn as sns
-import utils
+import utils as U
 
 
 class Experiment:
@@ -56,7 +56,7 @@ class Experiment:
                                                           |
                                                           +-RESULTS
         """
-        self._base_dir = utils.ROOT_DIR + self._name + "/"
+        self._base_dir = U.ROOT_DIR + self._name + "/"
         self._time_started = datetime.now(pytz.timezone('Israel')).strftime("%d_%m_%Y___%H_%M_%S")
         self._run_dir = self._base_dir + self._time_started + "/"
         self._results_dir = self._run_dir + "RESULTS/"
@@ -73,10 +73,10 @@ class Experiment:
         self._print("Test dir setup complete")
 
     def _save_model(self, model, name, weights_only=False):
-        utils.save_model(model, filepath=self._models_dir + name, weights_only=weights_only)
+        U.save_model(model, filepath=self._models_dir + name, weights_only=weights_only)
 
     def _load_model(self, filepath):
-        return utils.load_model(filepath)
+        return U.load_model(filepath)
 
     def generate_heatmap(self, data, row_labels, col_labels, filename):
         """

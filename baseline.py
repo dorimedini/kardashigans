@@ -8,7 +8,7 @@ import os
 import pytz
 import random
 import seaborn as sns
-import utils
+import utils as U
 
 
 class Baseline(Experiment):
@@ -65,7 +65,7 @@ class Baseline(Experiment):
 
     @staticmethod
     def construct_dataset_trainer(dataset, verbose=False):
-        dataset_name = utils.get_dataset_name(dataset)
+        dataset_name = U.get_dataset_name(dataset)
         return FCTrainer(dataset=dataset,
                          verbose=verbose,
                          epochs=Baseline.get_dataset_n_epochs(dataset_name),
@@ -108,7 +108,7 @@ class Baseline(Experiment):
                               filename="phase1_heatmap.png")
 
     def _phase2_dataset_robustness_by_epoch(self, model_name, layer):
-        checkpoints = utils.get_epoch_checkpoints()
+        checkpoints = U.get_epoch_checkpoints()
         model = self._dataset_fit(model_name)
         robustness = [self._check_robustness(model, [layer], epoch) for epoch in checkpoints]
         self._print("{} robustness of layer {} by epoch: {}".format(model_name, layer, robustness))
@@ -133,7 +133,7 @@ class Baseline(Experiment):
                                                "len(data[{}]) == {}".format(n_cols, i, len(data[i]))
             self.generate_heatmap(data=data,
                                   row_labels=rows,
-                                  col_labels=["Epoch {}".format(e) for e in utils.get_epoch_checkpoints()],
+                                  col_labels=["Epoch {}".format(e) for e in U.get_epoch_checkpoints()],
                                   filename="phase2_{}_heatmap.png".format(model_name))
 
     def go(self):
