@@ -118,6 +118,11 @@ class Experiment(Verbose):
         test_set = self._test_sets[model_name]
         return test_set['x'], test_set['y']
 
+    @staticmethod
+    def get_dataset_name(dataset):
+        name = dataset.__name__
+        return name[name.rfind(".") + 1:]
+
     def _dataset_fit(self, model_name, force=False):
         """
         Trains a model, or loads from file if a path exists using the

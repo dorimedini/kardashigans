@@ -29,11 +29,6 @@ def reset_layers(model, layers):
                 initializer_method.run(session=session)
 
 
-def get_dataset_name(dataset):
-    name = dataset.__name__
-    return name[name.rfind(".") + 1:]
-
-
 def get_layers_weights(model):
     return [layer.get_weights() for layer in model.layers]
 

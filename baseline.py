@@ -1,5 +1,5 @@
 from datetime import datetime
-from experiment import ExperimentWithCheckpoints
+from experiment import Experiment, ExperimentWithCheckpoints
 from keras import optimizers
 from keras.models import model_from_json
 from trainer import FCTrainer
@@ -64,7 +64,7 @@ class Baseline(ExperimentWithCheckpoints):
 
     @staticmethod
     def construct_dataset_trainer(dataset, verbose=False):
-        dataset_name = U.get_dataset_name(dataset)
+        dataset_name = Experiment.get_dataset_name(dataset)
         return FCTrainer(dataset=dataset,
                          verbose=verbose,
                          epochs=Baseline.get_dataset_n_epochs(dataset_name),
