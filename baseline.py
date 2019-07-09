@@ -6,7 +6,6 @@ from trainer import FCTrainer
 import matplotlib.pylab as plt
 import os
 import pytz
-import random
 import seaborn as sns
 import utils as U
 
@@ -22,7 +21,6 @@ class Baseline(ExperimentWithCheckpoints):
     """
     def __init__(self, resource_load_dir=None, verbose=False):
         # Map model names to dataset names on which they run ('phase1_mnist' -> 'mnist')
-        random.seed()  # Won't need this when we replace the stub _check_robustness
         super(Baseline, self).__init__(name='Baseline',
                                        model_names=['mnist', 'cifar10'],
                                        verbose=verbose,
@@ -31,10 +29,6 @@ class Baseline(ExperimentWithCheckpoints):
                                            'cifar10': Baseline.construct_dataset_trainer(U.cifar10, verbose)
                                        },
                                        resource_load_dir=resource_load_dir)
-
-    # TODO: Implement this method
-    def _check_robustness(self, model, layers=None, init_from_epoch=None):
-        return random.random()
 
     @staticmethod
     def get_dataset_n_epochs(dataset_name):
@@ -76,7 +70,20 @@ class Baseline(ExperimentWithCheckpoints):
 
     def _phase1_dataset_robustness(self, model_name):
         model = self._dataset_fit(model_name)
-        robustness = [self._check_robustness(model, [i]) for i in range(len(model.layers))]
+        test_set = self._test_sets[model_name]
+        clean_results = U.calc_robustness(test_data=(test_set['x'], test_set['y']),
+                                          model=model,
+                                          batch_size=Baseline.get_dataset_batch_size(model_name))
+        if 'start' not in model.saved_checkpoints:
+            self._print("Missing 'start' checkpoint in phase1, cannot continue")
+            return [clean_results] + [0 for i in range(len(model.layers))]
+        robustness = [U.calc_robustness(test_data=(test_set['x'], test_set['y']),
+                                        model=model,
+                                        source_weights_model=model.saved_checkpoints['start'],
+                                        layer_indices=[i],
+                                        batch_size=Baseline.get_dataset_batch_size(model_name))
+                      for i in range(len(model.layers))]
+        robustness = [clean_results] + robustness
         self._print("{} robustness: by layer: {}".format(model_name, robustness))
         return robustness
 
@@ -90,15 +97,30 @@ class Baseline(ExperimentWithCheckpoints):
             rows += [model_name]
         self._print("Robustness results: got {} rows, with {} columns on the first row, "
                     "row labels are {}".format(len(data), len(data[0]), rows))
+        n_layers = len(data[0]) - 1
         self.generate_heatmap(data=data,
                               row_labels=rows,
-                              col_labels=["Layer %d" % i for i in range(len(data[0]))],
+                              col_labels=["Baseline"] + ["Layer %d" % i for i in range(n_layers)],
                               filename="phase1_heatmap.png")
 
     def _phase2_dataset_robustness_by_epoch(self, model_name, layer):
         checkpoints = self._trainers[model_name].get_epoch_checkpoints()
         model = self._dataset_fit(model_name)
-        robustness = [self._check_robustness(model, [layer], epoch) for epoch in checkpoints]
+        test_set = self._test_sets[model_name]
+        clean_results = U.calc_robustness(test_data=(test_set['x'], test_set['y']),
+                                          model=model,
+                                          batch_size=Baseline.get_dataset_batch_size(model_name))
+        for i in checkpoints:
+            if i not in model.saved_checkpoints:
+                self._print("Missing checkpoint at epoch {} in phase2, cannot continue".format(i))
+                return [clean_results] + [0 for i in range(len(checkpoints))]
+        robustness = [U.calc_robustness(test_data=(test_set['x'], test_set['y']),
+                                        model=model,
+                                        source_weights_model=model.saved_checkpoints[epoch],
+                                        layer_indices=[layer],
+                                        batch_size=Baseline.get_dataset_batch_size(model_name))
+                      for epoch in checkpoints]
+        robustness = [clean_results] + robustness
         self._print("{} robustness of layer {} by epoch: {}".format(model_name, layer, robustness))
         return robustness
 
@@ -116,7 +138,7 @@ class Baseline(ExperimentWithCheckpoints):
                 rows += ["Layer {}".format(layer)]
             self.generate_heatmap(data=data,
                                   row_labels=rows,
-                                  col_labels=["Epoch {}".format(e) for e in U.get_epoch_checkpoints()],
+                                  col_labels=["Baseline"] + ["Epoch {}".format(e) for e in U.get_epoch_checkpoints()],
                                   filename="phase2_{}_heatmap.png".format(model_name))
 
     def go(self):
