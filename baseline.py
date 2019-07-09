@@ -1,5 +1,4 @@
 from datetime import datetime
-from google.colab import drive
 from keras import optimizers
 from keras.models import model_from_json
 import matplotlib.pylab as plt
@@ -17,13 +16,13 @@ import utils
 class Baseline:
     def __init__(self,
                  verbose=False,
-                 only_on_datasets=None):
+                 only_on_datasets=[utils.mnist, utils.cifar10],
+                 root_dir=''):
         random.seed()  # Won't need this when we replace the stub _check_robustness
-        drive.mount('/content/drive')
         self._verbose = verbose
-        self._datasets = only_on_datasets if only_on_datasets else [utils.mnist, utils.cifar10]
+        self._datasets = only_on_datasets
         self._trained_datasets = {}
-        self._setup_env()
+        self._setup_env(root_dir)
 
     # Simple filtered print
     def _print(self, *args, **kwargs):
@@ -34,8 +33,8 @@ class Baseline:
     def _check_robustness(self, model, layers=None, init_from_epoch=None):
         return random.random()
 
-    def _setup_env(self):
-        self._base_dir = utils.ROOT_DIR + "baseline/"
+    def _setup_env(self, root_dir):
+        self._base_dir = root_dir + "baseline/"
         self._time_started = datetime.now(pytz.timezone('Israel')).strftime("%d_%m_%Y___%H_%M_%S")
         self._run_dir = self._base_dir + self._time_started + "/"
         self._results_dir = self._run_dir + "RESULTS/"
