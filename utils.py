@@ -1,20 +1,4 @@
-# Imports
-import numpy as np
 from keras import backend as K
-from keras import optimizers
-from keras.datasets import mnist, cifar10
-from keras.models import Sequential, Model
-from keras.layers import Activation, Dense, BatchNormalization, Input, Dropout, Concatenate, Flatten
-from keras.utils import to_categorical, Sequence, plot_model
-from keras.layers.merge import add
-from keras.callbacks import Callback, ModelCheckpoint
-from keras.applications.resnet50 import ResNet50
-from keras.applications.vgg16 import VGG16
-from verbose import Verbose
-
-"""
-Functions
-"""
 
 
 def reset_layers(model, layers):

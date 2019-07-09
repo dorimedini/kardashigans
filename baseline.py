@@ -1,6 +1,7 @@
 from datetime import datetime
 from experiment import Experiment, ExperimentWithCheckpoints
 from keras import optimizers
+from keras.datasets import mnist, cifar10
 from keras.models import model_from_json
 from trainer import FCTrainer
 import matplotlib.pylab as plt
@@ -28,8 +29,8 @@ class Baseline(ExperimentWithCheckpoints):
                                        model_names=['mnist', 'cifar10'],
                                        verbose=verbose,
                                        trainers={
-                                           'mnist': Baseline.construct_dataset_trainer(U.mnist, verbose),
-                                           'cifar10': Baseline.construct_dataset_trainer(U.cifar10, verbose)
+                                           'mnist': Baseline.construct_dataset_trainer(mnist, verbose),
+                                           'cifar10': Baseline.construct_dataset_trainer(cifar10, verbose)
                                        },
                                        root_dir=root_dir,
                                        resource_load_dir=resource_load_dir)
