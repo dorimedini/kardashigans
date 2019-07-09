@@ -108,7 +108,7 @@ class Baseline(ExperimentWithCheckpoints):
                               filename="phase1_heatmap.png")
 
     def _phase2_dataset_robustness_by_epoch(self, model_name, layer):
-        checkpoints = self._trainers[model_name].get_epoch_checkpoints()
+        checkpoints = self._resource_manager.get_checkpoint_epoch_keys()
         model = self._dataset_fit(model_name)
         test_set = self._test_sets[model_name]
         clean_results = U.calc_robustness(test_data=(test_set['x'], test_set['y']),
@@ -133,6 +133,7 @@ class Baseline(ExperimentWithCheckpoints):
         # Output a separate heatmap for each dataset.
         # Rows are layers, columns are epochs from which the weights were
         # taken.
+        epochs = self._resource_manager.get_checkpoint_epoch_keys()
         for model_name in self._model_names:
             self._print("Running phase2 on {}".format(model_name))
             data = []
@@ -140,10 +141,9 @@ class Baseline(ExperimentWithCheckpoints):
             for layer in range(Baseline.get_dataset_n_layers(model_name)):
                 data += [self._phase2_dataset_robustness_by_epoch(model_name, layer)]
                 rows += ["Layer {}".format(layer)]
-            col_labels = ["Baseline"] + ["Epoch {}".format(e) for e in self._trainers[model_name].get_epoch_checkpoints()]
             self.generate_heatmap(data=data,
                                   row_labels=rows,
-                                  col_labels=col_labels,
+                                  col_labels=["Baseline"] + ["Epoch {}".format(e) for e in epochs],
                                   filename="phase2_{}_heatmap.png".format(model_name))
 
     def go(self):

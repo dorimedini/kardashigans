@@ -166,12 +166,12 @@ class ExperimentWithCheckpoints(Experiment):
         super(ExperimentWithCheckpoints, self).__init__(*args, **kwargs)
         self._update_epoch_checkpoint_callbacks()
 
-    def get_epoch_checkpoints(self, model_name):
-        return self._trainers[model_name].get_epoch_checkpoints()
+    def get_epoch_save_period(self):
+        return self._resource_manager.get_epoch_save_period()
 
     def _update_epoch_checkpoint_callbacks(self):
         for name in self._model_names:
-            cb = self._resource_manager.get_epoch_save_callback(name, period=self.get_epoch_checkpoints(name))
+            cb = self._resource_manager.get_epoch_save_callback(name)
             self._trainers[name].set_checkpoint_callbacks([cb])
 
     def _try_load_model_with_checkpoints(self, model_name):
@@ -180,7 +180,7 @@ class ExperimentWithCheckpoints(Experiment):
             return None
         model.saved_checkpoints = self._resource_manager.try_load_model_checkpoints(
             model_name=model_name,
-            period=self.get_epoch_checkpoints(model_name)
+            period=self.get_epoch_save_period()
         )
         return model
 

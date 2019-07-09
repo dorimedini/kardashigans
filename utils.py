@@ -34,10 +34,6 @@ def get_dataset_name(dataset):
     return name[name.rfind(".") + 1:]
 
 
-def get_epoch_checkpoints():
-    return [0, 1, 2, 3, 8, 40, 90, 100]
-
-
 def get_layers_weights(model):
     return [layer.get_weights() for layer in model.layers]
 

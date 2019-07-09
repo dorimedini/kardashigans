@@ -146,9 +146,6 @@ class FCTrainer(Verbose):
     def get_test_data(self):
         return self._x_test, self._y_test
 
-    def get_epoch_checkpoints(self):
-        return sorted(list(set([(percentile * (self._epochs - 1)) // 100 for percentile in U.get_epoch_checkpoints()])))
-
     def set_checkpoint_callbacks(self, callbacks=[]):
         self._checkpoint_callbacks = callbacks
 

@@ -30,10 +30,17 @@ class ResourceManager(Verbose):
     def _get_checkpoint_file_template(self, model_name):
         return model_name + "_epoch_{epoch}.h5"
 
-    def get_epoch_save_callback(self, model_name, period):
+    def get_epoch_save_period(self):
+        return [0, 1, 2, 3, 8, 40, 90]
+
+    def get_checkpoint_epoch_keys(self):
+        return ['start'] + self.get_epoch_save_period() + ['end']
+
+    def get_epoch_save_callback(self, model_name):
         filepath_template = self._model_save_dir + self._get_checkpoint_file_template(model_name)
         return SaveModelAtEpochsCallback(filepath_template=filepath_template,
-                                         period=period)
+                                         period=self.get_epoch_save_period(),
+                                         verbose=self._verbose)
 
     def save_model(self, model, model_name):
         model.save(self._model_save_dir + self._model_file_template.format(model_name=model_name),
