@@ -38,10 +38,6 @@ def get_epoch_checkpoints():
     return [0, 1, 2, 3, 8, 40, 90, 100]
 
 
-def save_model(model, filepath):
-    model.save(filepath, overwrite=True)
-
-
 def get_layers_weights(model):
     return [layer.get_weights() for layer in model.layers]
 
@@ -122,16 +118,16 @@ class CustomModelCheckpoint(Callback):
 
     def on_train_begin(self, logs=None):
         filepath = self.filepath_template.format(epoch="start", **logs)
-        save_model(self.model, filepath)
+        self.model.save(filepath, overwrite=True)
         self._printer._print("saved model to {}".format(filepath))
 
     def on_epoch_end(self, epoch, logs=None):
         if epoch in self.period:
             filepath = self.filepath_template.format(epoch=epoch, **logs)
-            save_model(self.model, filepath)
+            self.model.save(filepath, overwrite=True)
             self._printer._print("saved model to {}".format(filepath))
 
     def on_train_end(self, logs=None):
         filepath = self.filepath_template.format(epoch="end", **logs)
-        save_model(self.model, filepath)
+        self.model.save(filepath, overwrite=True)
         self._printer._print("saved model to {}".format(filepath))
