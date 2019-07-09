@@ -17,13 +17,6 @@ Functions
 """
 
 
-def copy_layers(target, source, layers):
-    assert len(target.layers) == len(source.layers)
-    assert max(layers) < len(target.layers)
-    for idx in layers:
-        target.layers[idx].set_weights(source.layers[idx].get_weights())
-
-
 def reset_layers(model, layers):
     assert max(layers) < len(model.layers)
     session = K.get_session()
