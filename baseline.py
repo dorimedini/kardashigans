@@ -148,8 +148,3 @@ class Baseline(ExperimentWithCheckpoints):
     def go(self):
         self.phase1()
         self.phase2()
-
-
-if __name__ == "__main__":
-    baseline = Baseline(verbose=True, root_dir='/content/drive/My Drive/globi/')
-    baseline.go()
