@@ -3,7 +3,6 @@ from keras import optimizers
 from keras.layers import Input, Dense
 from keras.models import Model
 import numpy as np
-import utils as U
 from verbose import Verbose
 
 

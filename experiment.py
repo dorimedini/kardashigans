@@ -4,7 +4,6 @@ import matplotlib.pylab as plt
 import os
 import pytz
 import seaborn as sns
-import utils as U
 from verbose import Verbose
 
 

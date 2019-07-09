@@ -3,12 +3,12 @@ from experiment import Experiment, ExperimentWithCheckpoints
 from keras import optimizers
 from keras.datasets import mnist, cifar10
 from keras.models import model_from_json
+from model_utils import calc_robustness
 from trainer import FCTrainer
 import matplotlib.pylab as plt
 import os
 import pytz
 import seaborn as sns
-import utils as U
 
 
 class Baseline(ExperimentWithCheckpoints):
@@ -76,17 +76,17 @@ class Baseline(ExperimentWithCheckpoints):
     def _phase1_dataset_robustness(self, model_name):
         model = self._dataset_fit(model_name)
         test_set = self._test_sets[model_name]
-        clean_results = U.calc_robustness(test_data=(test_set['x'], test_set['y']),
-                                          model=model,
-                                          batch_size=Baseline.get_dataset_batch_size(model_name))
+        clean_results = calc_robustness(test_data=(test_set['x'], test_set['y']),
+                                        model=model,
+                                        batch_size=Baseline.get_dataset_batch_size(model_name))
         if 'start' not in model.saved_checkpoints:
             self._print("Missing 'start' checkpoint in phase1, cannot continue")
             return [clean_results] + [0 for i in range(len(model.layers))]
-        robustness = [U.calc_robustness(test_data=(test_set['x'], test_set['y']),
-                                        model=model,
-                                        source_weights_model=model.saved_checkpoints['start'],
-                                        layer_indices=[i],
-                                        batch_size=Baseline.get_dataset_batch_size(model_name))
+        robustness = [calc_robustness(test_data=(test_set['x'], test_set['y']),
+                                      model=model,
+                                      source_weights_model=model.saved_checkpoints['start'],
+                                      layer_indices=[i],
+                                      batch_size=Baseline.get_dataset_batch_size(model_name))
                       for i in range(len(model.layers))]
         robustness = [clean_results] + robustness
         self._print("{} robustness: by layer: {}".format(model_name, robustness))
@@ -112,18 +112,18 @@ class Baseline(ExperimentWithCheckpoints):
         checkpoints = self._resource_manager.get_checkpoint_epoch_keys()
         model = self._dataset_fit(model_name)
         test_set = self._test_sets[model_name]
-        clean_results = U.calc_robustness(test_data=(test_set['x'], test_set['y']),
-                                          model=model,
-                                          batch_size=Baseline.get_dataset_batch_size(model_name))
+        clean_results = calc_robustness(test_data=(test_set['x'], test_set['y']),
+                                        model=model,
+                                        batch_size=Baseline.get_dataset_batch_size(model_name))
         for i in checkpoints:
             if i not in model.saved_checkpoints:
                 self._print("Missing checkpoint at epoch {} in phase2, cannot continue".format(i))
                 return [clean_results] + [0 for i in range(len(checkpoints))]
-        robustness = [U.calc_robustness(test_data=(test_set['x'], test_set['y']),
-                                        model=model,
-                                        source_weights_model=model.saved_checkpoints[epoch],
-                                        layer_indices=[layer],
-                                        batch_size=Baseline.get_dataset_batch_size(model_name))
+        robustness = [calc_robustness(test_data=(test_set['x'], test_set['y']),
+                                      model=model,
+                                      source_weights_model=model.saved_checkpoints[epoch],
+                                      layer_indices=[layer],
+                                      batch_size=Baseline.get_dataset_batch_size(model_name))
                       for epoch in checkpoints]
         robustness = [clean_results] + robustness
         self._print("{} robustness of layer {} by epoch: {}".format(model_name, layer, robustness))

@@ -1,5 +1,4 @@
 import keras
-import utils as U
 from verbose import Verbose
 from keras.callbacks import Callback
 
