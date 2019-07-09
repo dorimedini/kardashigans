@@ -60,11 +60,7 @@ def save_model(model, filepath, weights_only=False):
 
 
 def get_layers_weights(model):
-# TODO: Make this one line
-    weights = []
-    for layer in model.layers:
-        weights.append(layer.get_weights())
-    return weights
+    return [layer.get_weights() for layer in model.layers]
 
 
 def calc_robustness(test_data, model, epochs_weights, layer_indices=[], batch_size=32):
