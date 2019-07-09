@@ -1,6 +1,5 @@
 # Imports
 import numpy as np
-from inspect import getframeinfo, stack
 from keras import backend as K
 from keras import optimizers
 from keras.datasets import mnist, cifar10
@@ -11,6 +10,7 @@ from keras.layers.merge import add
 from keras.callbacks import Callback, ModelCheckpoint
 from keras.applications.resnet50 import ResNet50
 from keras.applications.vgg16 import VGG16
+from verbose import Verbose
 
 """
 Functions
@@ -70,21 +70,6 @@ def calc_robustness(test_data, model, source_weights_model=None, layer_indices=[
 def reset_to_checkpoint(model, checkpoint_weights):
     for idx in range(len(checkpoint_weights)):
         model.layers[idx].set_weights(checkpoint_weights[idx])
-
-
-"""
-Classes
-"""
-
-
-class Verbose(object):
-    def __init__(self, verbose=False):
-        self._verbose = verbose
-
-    def _print(self, *args, **kwargs):
-        caller = getframeinfo(stack()[1][0])
-        if self._verbose:
-            print("%s:%d - %s" % (caller.filename, caller.lineno, args[0]), *args[1:], **kwargs)
 
 
 """

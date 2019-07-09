@@ -5,9 +5,10 @@ import os
 import pytz
 import seaborn as sns
 import utils as U
+from verbose import Verbose
 
 
-class Experiment(U.Verbose):
+class Experiment(Verbose):
     """ Base class for all experiments. """
     def __init__(self,
                  name,

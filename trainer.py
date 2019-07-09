@@ -4,9 +4,10 @@ from keras.layers import Input, Dense
 from keras.models import Model
 import numpy as np
 import utils as U
+from verbose import Verbose
 
 
-class FCTrainer(U.Verbose):
+class FCTrainer(Verbose):
     """ Trains a fully connected network on a dataset """
     def __init__(self,
                  dataset,
