@@ -29,10 +29,6 @@ def reset_layers(model, layers):
                 initializer_method.run(session=session)
 
 
-def get_layers_weights(model):
-    return [layer.get_weights() for layer in model.layers]
-
-
 def calc_robustness(test_data, model, source_weights_model=None, layer_indices=[], batch_size=32):
     """
     Evaluates the model on test data.
