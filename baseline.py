@@ -90,19 +90,6 @@ class Baseline(ExperimentWithCheckpoints):
             rows += [model_name]
         self._print("Robustness results: got {} rows, with {} columns on the first row, "
                     "row labels are {}".format(len(data), len(data[0]), rows))
-        # Make sure the data rows have the same number of columns
-        # (i.e, make sure each model had the same number of layers)
-        if len(data) > 1:
-            n_cols = len(data[0])
-            for i in range(1, len(data)):
-                assert n_cols == len(data[i]), \
-                    "All dataset robustness results must have same size (different net " \
-                    "topologies used by accident?), currently {} has {} robustness " \
-                    "tests and {} has {}".format(rows[0],
-                                                 n_cols,
-                                                 rows[i],
-                                                 len(data[i]))
-
         self.generate_heatmap(data=data,
                               row_labels=rows,
                               col_labels=["Layer %d" % i for i in range(len(data[0]))],
@@ -127,11 +114,6 @@ class Baseline(ExperimentWithCheckpoints):
             for layer in range(Baseline.get_dataset_n_layers(model_name)):
                 data += [self._phase2_dataset_robustness_by_epoch(model_name, layer)]
                 rows += ["Layer {}".format(layer)]
-            n_cols = len(data[0])
-            for i in range(1, len(data)):
-                assert n_cols == len(data[i]), "Different number of epoch checkpoints " \
-                                               "on different layers...? n_cols == {} but" \
-                                               "len(data[{}]) == {}".format(n_cols, i, len(data[i]))
             self.generate_heatmap(data=data,
                                   row_labels=rows,
                                   col_labels=["Epoch {}".format(e) for e in U.get_epoch_checkpoints()],
