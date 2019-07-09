@@ -70,11 +70,16 @@ def get_layers_weights(model):
 def calc_robustness(test_data, model, epochs_weights, layer_indices=[], batch_size=32):
     results = {}
     x_test, y_test = test_data
+    # baseline
     results["baseline"] = model.evaluate(x_test, y_test, batch_size=batch_size)
+    # epochs
     for epoch, weights in epochs_weights.items():
         for idx in layer_indices:
             model.layers[idx].set_weights(weights[idx])
         results[epoch] = model.evaluate(x_test, y_test, batch_size=batch_size)
+    # reRnd
+    reset_layers(model, layer_indices)
+    results["random"] = model.evaluate(x_test, y_test, batch_size=batch_size)
     return results
 
 
