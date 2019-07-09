@@ -196,9 +196,3 @@ class Baseline:
         assert len(self._datasets) > 0, "No datasets requested... nothing to do"
         self.phase1()
         self.phase2()
-
-
-if __name__ == "__main__":
-    #baseline = Baseline(verbose=True)
-    baseline = Baseline(verbose=True, only_on_datasets=[utils.cifar10])
-    baseline.go()
