@@ -1,5 +1,6 @@
 # Imports
 import numpy as np
+from inspect import getframeinfo, stack
 from keras import backend as K
 from keras import optimizers
 from keras.datasets import mnist, cifar10
@@ -87,6 +88,21 @@ def reset_to_checkpoint(model, checkpoint_weights):
 
 
 """
+Classes
+"""
+
+
+class Verbose(object):
+    def __init__(self, verbose=False):
+        self._verbose = verbose
+
+    def _print(self, *args, **kwargs):
+        caller = getframeinfo(stack()[1][0])
+        if self._verbose:
+            print("%s:%d - %s" % (caller.filename, caller.lineno, args[0]), *args[1:], **kwargs)
+
+
+"""
 Callbacks
 """
 
@@ -109,23 +125,24 @@ class SaveEpochsWeightsToDictCheckpoint(Callback):
 
 
 class CustomModelCheckpoint(Callback):
-    def __init__(self, filepath_template, period=[]):
+    def __init__(self, filepath_template, period=[], verbose=False):
         super(CustomModelCheckpoint, self).__init__()
         self.filepath_template = filepath_template
         self.period = period
+        self._printer = Verbose(verbose=verbose)
 
     def on_train_begin(self, logs=None):
         filepath = self.filepath_template.format(epoch="start", **logs)
         save_model(self.model, filepath)
-        print("saved model to {}".format(filepath))
+        self._printer._print("saved model to {}".format(filepath))
 
     def on_epoch_end(self, epoch, logs=None):
         if epoch in self.period:
             filepath = self.filepath_template.format(epoch=epoch, **logs)
             save_model(self.model, filepath)
-            print("saved model to {}".format(filepath))
+            self._printer._print("saved model to {}".format(filepath))
 
     def on_train_end(self, logs=None):
         filepath = self.filepath_template.format(epoch="end", **logs)
         save_model(self.model, filepath)
-        print("saved model to {}".format(filepath))
+        self._printer._print("saved model to {}".format(filepath))

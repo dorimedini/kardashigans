@@ -2,7 +2,7 @@ import keras
 import utils as U
 
 
-class ResourceManager(U.VerboseClass):
+class ResourceManager(U.Verbose):
     """ Handles saving / loading trained models """
     def __init__(self, model_save_dir, model_load_dir, verbose=False):
         """
