@@ -140,9 +140,10 @@ class Baseline(ExperimentWithCheckpoints):
             for layer in range(Baseline.get_dataset_n_layers(model_name)):
                 data += [self._phase2_dataset_robustness_by_epoch(model_name, layer)]
                 rows += ["Layer {}".format(layer)]
+            col_labels = ["Baseline"] + ["Epoch {}".format(e) for e in self._trainers[model_name].get_epoch_checkpoints()]
             self.generate_heatmap(data=data,
                                   row_labels=rows,
-                                  col_labels=["Baseline"] + ["Epoch {}".format(e) for e in U.get_epoch_checkpoints()],
+                                  col_labels=col_labels,
                                   filename="phase2_{}_heatmap.png".format(model_name))
 
     def go(self):
