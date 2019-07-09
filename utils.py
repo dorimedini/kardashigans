@@ -70,25 +70,3 @@ def calc_robustness(test_data, model, source_weights_model=None, layer_indices=[
 def reset_to_checkpoint(model, checkpoint_weights):
     for idx in range(len(checkpoint_weights)):
         model.layers[idx].set_weights(checkpoint_weights[idx])
-
-
-"""
-Callbacks
-"""
-
-
-class SaveEpochsWeightsToDictCheckpoint(Callback):
-    def __init__(self, weights_dict, period=[]):
-        super(SaveEpochsWeightsToDictCheckpoint, self).__init__()
-        self.weights_dict = weights_dict
-        self.period = period
-
-    def on_train_begin(self, logs=None):
-        self.weights_dict["train_begin"] = get_layers_weights(self.model)
-
-    def on_epoch_end(self, epoch, logs=None):
-        if epoch in self.period:
-            self.weights_dict[str(epoch)] = get_layers_weights(self.model)
-
-    def on_train_end(self, logs=None):
-        self.weights_dict["train_end"] = get_layers_weights(self.model)
