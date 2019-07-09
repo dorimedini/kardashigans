@@ -92,27 +92,3 @@ class SaveEpochsWeightsToDictCheckpoint(Callback):
 
     def on_train_end(self, logs=None):
         self.weights_dict["train_end"] = get_layers_weights(self.model)
-
-
-class CustomModelCheckpoint(Callback):
-    def __init__(self, filepath_template, period=[], verbose=False):
-        super(CustomModelCheckpoint, self).__init__()
-        self.filepath_template = filepath_template
-        self.period = period
-        self._printer = Verbose(verbose=verbose)
-
-    def on_train_begin(self, logs=None):
-        filepath = self.filepath_template.format(epoch="start", **logs)
-        self.model.save(filepath, overwrite=True)
-        self._printer._print("saved model to {}".format(filepath))
-
-    def on_epoch_end(self, epoch, logs=None):
-        if epoch in self.period:
-            filepath = self.filepath_template.format(epoch=epoch, **logs)
-            self.model.save(filepath, overwrite=True)
-            self._printer._print("saved model to {}".format(filepath))
-
-    def on_train_end(self, logs=None):
-        filepath = self.filepath_template.format(epoch="end", **logs)
-        self.model.save(filepath, overwrite=True)
-        self._printer._print("saved model to {}".format(filepath))
