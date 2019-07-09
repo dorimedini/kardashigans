@@ -1,7 +1,7 @@
 # Imports
+import numpy as np
 from keras import backend as K
 from keras import optimizers
-import numpy as np
 from keras.datasets import mnist, cifar10
 from keras.models import Sequential, Model
 from keras.layers import Activation, Dense, BatchNormalization, Input, Dropout, Concatenate, Flatten
