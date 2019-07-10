@@ -11,10 +11,8 @@ from keras.callbacks import Callback, ModelCheckpoint
 from keras.applications.resnet50 import ResNet50
 from keras.applications.vgg16 import VGG16
 
-# Drive mounting
-# from google.colab import drive
-# drive.mount('/content/drive')
-# Define the working directory everyone should use
+# Define the working directory everyone should use, assuming
+# we're running on COLAB and connected to google drive
 ROOT_DIR = '/content/drive/My Drive/globi/'
 
 """
