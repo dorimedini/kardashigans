@@ -6,7 +6,7 @@ import numpy as np
 import utils as U
 
 
-class FCTrainer:
+class FCTrainer(U.Verbose):
     """ Trains a fully connected network on a dataset """
     def __init__(self,
                  dataset,
@@ -36,8 +36,8 @@ class FCTrainer:
         :param loss: Loss used when fitting
         :param metrics: By which to score
         """
+        super(FCTrainer, self).__init__(verbose=verbose)
         self._dataset = dataset
-        self._verbose = verbose
         self._n_layers = n_layers
         self._n_classes = n_classes
         self._n_neurons = n_neurons

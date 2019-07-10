@@ -7,7 +7,7 @@ import seaborn as sns
 import utils as U
 
 
-class Experiment:
+class Experiment(U.Verbose):
     """ Base class for all experiments. """
     def __init__(self,
                  name,
@@ -35,9 +35,9 @@ class Experiment:
             argument to the ResourceManager.
         :param verbose: Logging on / off.
         """
+        super(Experiment, self).__init__(verbose=verbose)
         self._name = name
         self._model_names = model_names
-        self._verbose = verbose
         self._trainers = trainers
         self._trained_models = {}
         self._setup_env()
@@ -46,10 +46,6 @@ class Experiment:
                                                  model_load_dir=self._resource_load_dir,
                                                  verbose=verbose)
         self._init_test_data()
-
-    def _print(self, *args, **kwargs):
-        if self._verbose:
-            print(*args, **kwargs)
 
     def _setup_env(self):
         """
