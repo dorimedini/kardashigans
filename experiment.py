@@ -123,6 +123,18 @@ class Experiment(Verbose):
         return name[name.rfind(".") + 1:]
 
     @staticmethod
+    def reset_layers(model, layers):
+        assert max(layers) < len(model.layers)
+        session = K.get_session()
+        for idx in layers:
+            layer = model.layers[idx]
+            for v in layer.__dict__:
+                v_arg = getattr(layer, v)
+                if hasattr(v_arg, 'initializer'):
+                    initializer_method = getattr(v_arg, 'initializer')
+                    initializer_method.run(session=session)
+
+    @staticmethod
     def calc_robustness(test_data, model, source_weights_model=None, layer_indices=[], batch_size=32):
         """
         Evaluates the model on test data.
