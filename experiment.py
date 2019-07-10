@@ -154,3 +154,41 @@ class Experiment:
     def go(self):
         """ Implement this in inheriting classes """
         pass
+
+
+class ExperimentWithCheckpoints(Experiment):
+    def __init__(self, *args, **kwargs):
+        super(ExperimentWithCheckpoints, self).__init__(*args, **kwargs)
+        self._update_epoch_checkpoint_callbacks()
+
+    def get_epoch_checkpoints(self, model_name):
+        return self._trainers[model_name].get_epoch_checkpoints()
+
+    def _update_epoch_checkpoint_callbacks(self):
+        for name in self._model_names:
+            cb = self._resource_manager.get_epoch_save_callback(name, period=self.get_epoch_checkpoints(name))
+            self._trainers[name].set_checkpoint_callbacks([cb])
+
+    def _try_load_model_with_checkpoints(self, model_name):
+        model = self._resource_manager.try_load_model(model_name)
+        if not model:
+            return None
+        model.saved_checkpoints = self._resource_manager.try_load_model_checkpoints(
+            model_name=model_name,
+            period=self.get_epoch_checkpoints(model_name)
+        )
+        return model
+
+    def try_load_model(self, model_name):
+        """ Override this (from superclass) to load checkpoints also """
+        self._print("In try_load_model, ExperimentWithCheckpoints version")
+        model = self._try_load_model_with_checkpoints(model_name)
+        if model:
+            self._trained_models[model_name] = model
+
+    def _post_fit(self, model_name):
+        model_with_checkpoints = self._try_load_model_with_checkpoints(model_name)
+        if model_with_checkpoints:
+            self._trained_models[model_name].saved_checkpoints = model_with_checkpoints.saved_checkpoints
+        else:
+            self._print("Couldn't load checkpoint data for model {}".format(model_name))

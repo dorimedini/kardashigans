@@ -1,5 +1,5 @@
 from datetime import datetime
-from experiment import Experiment
+from experiment import ExperimentWithCheckpoints
 from keras import optimizers
 from keras.models import model_from_json
 from trainer import FCTrainer
@@ -11,7 +11,7 @@ import seaborn as sns
 import utils as U
 
 
-class Baseline(Experiment):
+class Baseline(ExperimentWithCheckpoints):
     """
     Train MNIST and CIFAR10 on FC nets, 3 layers, and try to reproduce results
     on robustness of specific layers.
@@ -20,16 +20,17 @@ class Baseline(Experiment):
     train) weights, and phase2 re-initializes each layer to specific weight checkpoints
     (by epoch) when testing robustness.
     """
-    def __init__(self, verbose=False, trained_paths={}):
-        trainers = {'mnist': Baseline.construct_dataset_trainer(utils.mnist, verbose),
-                    'cifar10': Baseline.construct_dataset_trainer(utils.cifar10, verbose)}
+    def __init__(self, resource_load_dir=None, verbose=False):
         # Map model names to dataset names on which they run ('phase1_mnist' -> 'mnist')
         random.seed()  # Won't need this when we replace the stub _check_robustness
         super(Baseline, self).__init__(name='Baseline',
-                                       model_names=trainers.keys(),
+                                       model_names=['mnist', 'cifar10'],
                                        verbose=verbose,
-                                       trainers=trainers,
-                                       trained_paths=trained_paths)
+                                       trainers={
+                                           'mnist': Baseline.construct_dataset_trainer(U.mnist, verbose),
+                                           'cifar10': Baseline.construct_dataset_trainer(U.cifar10, verbose)
+                                       },
+                                       resource_load_dir=resource_load_dir)
 
     # TODO: Implement this method
     def _check_robustness(self, model, layers=None, init_from_epoch=None):
@@ -108,7 +109,7 @@ class Baseline(Experiment):
                               filename="phase1_heatmap.png")
 
     def _phase2_dataset_robustness_by_epoch(self, model_name, layer):
-        checkpoints = U.get_epoch_checkpoints()
+        checkpoints = self._trainers[model_name].get_epoch_checkpoints()
         model = self._dataset_fit(model_name)
         robustness = [self._check_robustness(model, [layer], epoch) for epoch in checkpoints]
         self._print("{} robustness of layer {} by epoch: {}".format(model_name, layer, robustness))

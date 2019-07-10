@@ -20,7 +20,8 @@ class FCTrainer:
                  output_activation='softmax',
                  optimizer=optimizers.SGD(momentum=0.9, nesterov=True),
                  loss='sparse_categorical_crossentropy',
-                 metrics=['accuracy']):
+                 metrics=['accuracy'],
+                 checkpoint_callbacks=[]):
         """
         :param dataset: keras.datasets.mnist, for example
         :param verbose: Logging on / off
@@ -47,6 +48,7 @@ class FCTrainer:
         self._optimizer = optimizer
         self._loss = loss
         self._metrics = metrics
+        self._checkpoint_callbacks = checkpoint_callbacks
         # Load the data at this point to set the shape
         (self._x_train, self._y_train), (self._x_test, self._y_test) = self._load_data_normalized()
         self._shape = (np.prod(self._x_train.shape[1:]),)
@@ -75,15 +77,6 @@ class FCTrainer:
         self._print("x_train.shape: {}".format(x_train.shape))
         self._print("x_test.shape: {}".format(x_test.shape))
         return (x_train, y_train), (x_test, y_test)
-
-    def _get_epoch_checkpoint_callback(self):
-        """ For 100 epochs we'll get checkpoints at epochs 0, 1, 2, 3, 8, 40, 90, 100.
-            For N epochs we'll get checkpoints at 0, 0.01N, 0.02N, 0.03N, 0.08N, 0.4N,
-            0.9N, N (rounded down)
-        """
-        checkpoint_epochs = [(percentile * self._epochs) // 100 for percentile in U.get_epoch_checkpoints()]
-        filepath = "vanilla.{epoch}.hdf5"
-        return U.CustomModelCheckpoint(filepath, period=checkpoint_epochs)
 
     def _connect_layers(self, layers):
         # Connect first layer to input, then connect each subsequent
@@ -144,10 +137,19 @@ class FCTrainer:
         model.fit(self._x_train, self._y_train,
                   shuffle=True,
                   epochs=self._epochs,
-                  callbacks=[self._get_epoch_checkpoint_callback()],
+                  callbacks=self._checkpoint_callbacks,
                   batch_size=self._batch_size,
                   validation_data=(self._x_test, self._y_test))
         return model
+
+    def get_test_data(self):
+        return self._x_test, self._y_test
+
+    def get_epoch_checkpoints(self):
+        return sorted(list(set([(percentile * (self._epochs - 1)) // 100 for percentile in U.get_epoch_checkpoints()])))
+
+    def set_checkpoint_callbacks(self, callbacks=[]):
+        self._checkpoint_callbacks = callbacks
 
 
 class FCFreezeTrainer(FCTrainer):
