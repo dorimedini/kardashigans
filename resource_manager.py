@@ -1,5 +1,5 @@
 import keras
-from verbose import Verbose
+from kardashigans.verbose import Verbose
 from keras.callbacks import Callback
 
 

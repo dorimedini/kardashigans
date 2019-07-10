@@ -1,10 +1,10 @@
 from datetime import datetime
-from resource_manager import ResourceManager
 import matplotlib.pylab as plt
 import os
 import pytz
 import seaborn as sns
-from verbose import Verbose
+from kardashigans.resource_manager import ResourceManager
+from kardashigans.verbose import Verbose
 
 
 class Experiment(Verbose):

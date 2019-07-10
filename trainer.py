@@ -3,7 +3,7 @@ from keras import optimizers
 from keras.layers import Input, Dense
 from keras.models import Model
 import numpy as np
-from verbose import Verbose
+from kardashigans.verbose import Verbose
 
 
 class FCTrainer(Verbose):
