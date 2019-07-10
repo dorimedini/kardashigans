@@ -3,10 +3,10 @@ from keras import optimizers
 from keras.layers import Input, Dense
 from keras.models import Model
 import numpy as np
-import utils as U
+from verbose import Verbose
 
 
-class FCTrainer(U.Verbose):
+class FCTrainer(Verbose):
     """ Trains a fully connected network on a dataset """
     def __init__(self,
                  dataset,
@@ -144,9 +144,6 @@ class FCTrainer(U.Verbose):
 
     def get_test_data(self):
         return self._x_test, self._y_test
-
-    def get_epoch_checkpoints(self):
-        return sorted(list(set([(percentile * (self._epochs - 1)) // 100 for percentile in U.get_epoch_checkpoints()])))
 
     def set_checkpoint_callbacks(self, callbacks=[]):
         self._checkpoint_callbacks = callbacks

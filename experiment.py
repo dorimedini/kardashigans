@@ -4,10 +4,10 @@ import matplotlib.pylab as plt
 import os
 import pytz
 import seaborn as sns
-import utils as U
+from verbose import Verbose
 
 
-class Experiment(U.Verbose):
+class Experiment(Verbose):
     """ Base class for all experiments. """
     def __init__(self,
                  name,
@@ -117,6 +117,36 @@ class Experiment(U.Verbose):
         test_set = self._test_sets[model_name]
         return test_set['x'], test_set['y']
 
+    @staticmethod
+    def get_dataset_name(dataset):
+        name = dataset.__name__
+        return name[name.rfind(".") + 1:]
+
+    @staticmethod
+    def calc_robustness(test_data, model, source_weights_model=None, layer_indices=[], batch_size=32):
+        """
+        Evaluates the model on test data.
+
+        Optionally, if source_weights_model is given, sets the weights
+        of the model (for layer indices appearing in layer_indices) at
+        each given layer to the weights of source_weights_model.
+
+        :param test_data: A tuple (x_test, y_test) for validation
+        :param model: The model to evaluate
+        :param source_weights_model: The model from which we should
+            copy weights and update our model's weights before eval.
+        :param layer_indices: Layers to reset the weights of.
+        :param batch_size: Self explanatory
+        :return: A number in the interval [0,1] representing accuracy.
+        """
+        x_test, y_test = test_data
+        if source_weights_model:
+            for idx in layer_indices:
+                loaded_weights = source_weights_model.layers[idx].get_weights()
+                model.layers[idx].set_weights(loaded_weights)
+        evaluated_metrics = model.evaluate(x_test, y_test, batch_size=batch_size)
+        return evaluated_metrics[model.metrics_names.index('acc')]
+
     def _dataset_fit(self, model_name, force=False):
         """
         Trains a model, or loads from file if a path exists using the
@@ -165,12 +195,12 @@ class ExperimentWithCheckpoints(Experiment):
         super(ExperimentWithCheckpoints, self).__init__(*args, **kwargs)
         self._update_epoch_checkpoint_callbacks()
 
-    def get_epoch_checkpoints(self, model_name):
-        return self._trainers[model_name].get_epoch_checkpoints()
+    def get_epoch_save_period(self):
+        return self._resource_manager.get_epoch_save_period()
 
     def _update_epoch_checkpoint_callbacks(self):
         for name in self._model_names:
-            cb = self._resource_manager.get_epoch_save_callback(name, period=self.get_epoch_checkpoints(name))
+            cb = self._resource_manager.get_epoch_save_callback(name)
             self._trainers[name].set_checkpoint_callbacks([cb])
 
     def _try_load_model_with_checkpoints(self, model_name):
@@ -179,7 +209,7 @@ class ExperimentWithCheckpoints(Experiment):
             return None
         model.saved_checkpoints = self._resource_manager.try_load_model_checkpoints(
             model_name=model_name,
-            period=self.get_epoch_checkpoints(model_name)
+            period=self.get_epoch_save_period()
         )
         return model
 
