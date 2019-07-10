@@ -1,9 +1,9 @@
 # Imports
+import numpy as np
 from keras import backend as K
 from keras import optimizers
-import numpy as np
 from keras.datasets import mnist, cifar10
-from keras.models import Sequential, load_model, Model
+from keras.models import Sequential, Model
 from keras.layers import Activation, Dense, BatchNormalization, Input, Dropout, Concatenate, Flatten
 from keras.utils import to_categorical, Sequence, plot_model
 from keras.layers.merge import add
@@ -48,12 +48,8 @@ def get_epoch_checkpoints():
     return [0, 1, 2, 3, 8, 40, 90, 100]
 
 
-def save_model(model, filepath, weights_only=False):
-    if weights_only:
-        model.save_weights(filepath, overwrite=True)
-    else:
-        model.save(filepath, overwrite=True)
-# load_model is just imported from keras.models
+def save_model(model, filepath):
+    model.save(filepath, overwrite=True)
 
 
 def get_layers_weights(model):
