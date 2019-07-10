@@ -1,13 +1,13 @@
 from datetime import datetime
-from experiment import Experiment, ExperimentWithCheckpoints
 from keras import optimizers
 from keras.datasets import mnist, cifar10
 from keras.models import model_from_json
-from trainer import FCTrainer
 import matplotlib.pylab as plt
 import os
 import pytz
 import seaborn as sns
+from kardashigans.experiment import Experiment, ExperimentWithCheckpoints
+from kardashigans.trainer import FCTrainer
 
 
 class Baseline(ExperimentWithCheckpoints):
