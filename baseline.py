@@ -19,7 +19,10 @@ class Baseline(ExperimentWithCheckpoints):
     train) weights, and phase2 re-initializes each layer to specific weight checkpoints
     (by epoch) when testing robustness.
     """
-    def __init__(self, resource_load_dir=None, verbose=False):
+    def __init__(self,
+                 root_dir='/content/drive/My Drive/globi/',
+                 resource_load_dir=None,
+                 verbose=False):
         # Map model names to dataset names on which they run ('phase1_mnist' -> 'mnist')
         super(Baseline, self).__init__(name='Baseline',
                                        model_names=['mnist', 'cifar10'],
@@ -28,6 +31,7 @@ class Baseline(ExperimentWithCheckpoints):
                                            'mnist': Baseline.construct_dataset_trainer(U.mnist, verbose),
                                            'cifar10': Baseline.construct_dataset_trainer(U.cifar10, verbose)
                                        },
+                                       root_dir=root_dir,
                                        resource_load_dir=resource_load_dir)
 
     @staticmethod
@@ -144,8 +148,3 @@ class Baseline(ExperimentWithCheckpoints):
     def go(self):
         self.phase1()
         self.phase2()
-
-
-if __name__ == "__main__":
-    baseline = Baseline(verbose=True)
-    baseline.go()

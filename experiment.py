@@ -13,6 +13,7 @@ class Experiment(U.Verbose):
                  name,
                  model_names,
                  trainers,
+                 root_dir,
                  resource_load_dir=None,
                  verbose=False):
         """
@@ -30,6 +31,10 @@ class Experiment(U.Verbose):
             Trainer object used to create it (no need to provide the models, only
             names and Trainers). If an existing path is found for the model, the
             Trainer is ignored.
+        :param root_dir: path to the root directory from which models are loaded
+            and to which models are saved. resource_load_dir, if provided, must be
+            relative to the root_dir directory (if resource_load_dir provided,
+            models loaded from root_dir + resource_load_dir)
         :param resource_load_dir: If provided, is the path to a directory from which
             models should be loaded, relative to the root directory. Provided as an
             argument to the ResourceManager.
@@ -39,9 +44,10 @@ class Experiment(U.Verbose):
         self._name = name
         self._model_names = model_names
         self._trainers = trainers
+        self._root_dir = root_dir
+        self._resource_load_dir = resource_load_dir  # Gets default value if None
         self._trained_models = {}
         self._setup_env()
-        self._resource_load_dir = resource_load_dir if resource_load_dir else self._models_dir
         self._resource_manager = ResourceManager(model_save_dir=self._models_dir,
                                                  model_load_dir=self._resource_load_dir,
                                                  verbose=verbose)
@@ -56,11 +62,13 @@ class Experiment(U.Verbose):
                                                           |
                                                           +-RESULTS
         """
-        self._base_dir = U.ROOT_DIR + self._name + "/"
+        self._base_dir = self._root_dir + self._name + "/"
         self._time_started = datetime.now(pytz.timezone('Israel')).strftime("%d_%m_%Y___%H_%M_%S")
         self._run_dir = self._base_dir + self._time_started + "/"
         self._results_dir = self._run_dir + "RESULTS/"
         self._models_dir = self._run_dir + "MODELS/"
+        if not self._resource_load_dir:
+            self._resource_load_dir = self._models_dir
         self._print("In _setup_env(), setting up test dir at {}".format(self._run_dir))
         if not os.path.isdir(self._base_dir):
             os.mkdir(self._base_dir)
