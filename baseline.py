@@ -56,6 +56,16 @@ class Baseline(ExperimentWithCheckpoints):
             return optimizers.SGD(momentum=0.9, nesterov=True)
 
     @staticmethod
+    def get_dataset_optimizer_string(dataset_name):
+        optimizer = Baseline.get_dataset_optimizer(dataset_name)
+        params = dict(optimizer.get_config().items())
+        return "lr{lr:.3f}_momentum{momentum:.2f}_decay{decay:.2f}_nesterov{nesterov}" \
+               "".format(lr=params['lr'],
+                         momentum=params['momentum'],
+                         decay=params['decay'],
+                         nesterov='TRUE' if params['nesterov'] else 'FALSE')
+
+    @staticmethod
     def get_dataset_batch_size(dataset_name):
         if dataset_name == 'mnist':
             return 32
