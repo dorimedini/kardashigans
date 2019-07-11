@@ -52,9 +52,10 @@ class ResourceManager(Verbose):
         model.save(self._get_model_save_fullpath(model_name),
                    overwrite=True)
 
-    def load_model(self, model_name):
-        """ Uses the load_dir as base path """
-        return keras.models.load_model(self._get_model_load_fullpath(model_name))
+    def load_model(self, model_name, fullpath=None):
+        if not fullpath:
+            fullpath = self._get_model_load_fullpath(model_name)
+        return keras.models.load_model(fullpath)
 
     def try_load_model(self, model_name):
         """
