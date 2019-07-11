@@ -24,6 +24,12 @@ class ResourceManager(Verbose):
             path_to_dir += "/"
         return path_to_dir
 
+    def _get_model_save_fullpath(self, model_name):
+        return self._model_save_dir + self._model_file_template.format(model_name=model_name)
+
+    def _get_model_load_fullpath(self, model_name):
+        return self._model_load_dir + self._model_file_template.format(model_name=model_name)
+
     def _get_checkpoint_model_name(self, model_name, epoch):
         return model_name + "_epoch_{}".format(epoch)
 
@@ -43,12 +49,12 @@ class ResourceManager(Verbose):
                                          verbose=self._verbose)
 
     def save_model(self, model, model_name):
-        model.save(self._model_save_dir + self._model_file_template.format(model_name=model_name),
+        model.save(self._get_model_save_fullpath(model_name),
                    overwrite=True)
 
     def load_model(self, model_name):
         """ Uses the load_dir as base path """
-        return keras.models.load_model(self._model_load_dir + self._model_file_template.format(model_name=model_name))
+        return keras.models.load_model(self._get_model_load_fullpath(model_name))
 
     def try_load_model(self, model_name):
         """
