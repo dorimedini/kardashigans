@@ -127,7 +127,6 @@ class Experiment(Verbose):
 
     @staticmethod
     def rernd_layers(model, layers_indices):
-        assert max(layers_indices) < len(model.layers)
         session = K.get_session()
         for idx in layers_indices:
             layer = model.layers[idx]
