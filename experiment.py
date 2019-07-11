@@ -69,6 +69,8 @@ class Experiment(Verbose):
         self._models_dir = self._run_dir + "MODELS/"
         if not self._resource_load_dir:
             self._resource_load_dir = self._models_dir
+        else:
+            self._resource_load_dir = self._root_dir + self._resource_load_dir
         self._print("In _setup_env(), setting up test dir at {}".format(self._run_dir))
         if not os.path.isdir(self._base_dir):
             os.mkdir(self._base_dir)
