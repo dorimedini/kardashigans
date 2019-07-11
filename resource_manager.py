@@ -65,7 +65,12 @@ class ResourceManager(Verbose):
         try:
             return self.load_model(model_name)
         except:
-            self._print("Couldn't load model {}".format(model_name))
+            self._print("Couldn't load model from {}. Attempting to load from saved model directory (maybe newly"
+                        " trained)".format(self._get_model_load_fullpath(model_name)))
+            try:
+                return self.load_model(model_name, fullpath=self._get_model_save_fullpath(model_name))
+            except:
+                self._print("Couldn't even load model from {}".format(self._get_model_save_fullpath(model_name)))
         return None
 
     def try_load_model_checkpoints(self, model_name, period):
