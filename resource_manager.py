@@ -100,10 +100,10 @@ class ResourceManager(Verbose):
 
 
 class SaveModelAtEpochsCallback(Callback):
-    def __init__(self, filepath_template, period=[], verbose=False):
+    def __init__(self, filepath_template, period=None, verbose=False):
         super(SaveModelAtEpochsCallback, self).__init__()
         self.filepath_template = filepath_template
-        self.period = period
+        self.period = period if period else []
         self._printer = Verbose(verbose=verbose)
 
     def on_train_begin(self, logs=None):

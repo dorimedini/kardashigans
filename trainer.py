@@ -20,7 +20,7 @@ class FCTrainer(Verbose):
                  output_activation='softmax',
                  optimizer=optimizers.SGD(momentum=0.9, nesterov=True),
                  loss='sparse_categorical_crossentropy',
-                 metrics=['accuracy']):
+                 metrics=None):
         """
         :param dataset: keras.datasets.mnist, for example
         :param verbose: Logging on / off
@@ -46,7 +46,7 @@ class FCTrainer(Verbose):
         self._output_activation = output_activation
         self._optimizer = optimizer
         self._loss = loss
-        self._metrics = metrics
+        self._metrics = metrics if metrics else ['accuracy']
         self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
         (self._x_train, self._y_train), (self._x_test, self._y_test) = self._load_data_normalized()
@@ -150,7 +150,7 @@ class FCFreezeTrainer(FCTrainer):
         Overrides the _create_layers method of FCTrainer to allow layer
         freezing and weight initialization.
     """
-    def __init__(self, layers_to_freeze=[], weight_map={}, **kwargs):
+    def __init__(self, layers_to_freeze=None, weight_map=None, **kwargs):
         """
         :param layers_to_freeze: Optional list of layer indexes to set to
             'untrainable', i.e. their weights cannot change during
@@ -160,8 +160,8 @@ class FCFreezeTrainer(FCTrainer):
             with frozen layers.
         """
         super(FCFreezeTrainer, self).__init__(**kwargs)
-        self._layers_to_freeze = layers_to_freeze
-        self._weight_map = weight_map
+        self._layers_to_freeze = layers_to_freeze if layers_to_freeze else []
+        self._weight_map = weight_map if weight_map else {}
 
     def _create_layers(self):
         self._print("Creating {} layers, freezing {}".format(self._n_layers, len(self._layers_to_freeze)))

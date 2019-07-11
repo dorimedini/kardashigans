@@ -137,7 +137,7 @@ class Experiment(Verbose):
                     initializer_method.run(session=session)
 
     @staticmethod
-    def calc_robustness(test_data, model, source_weights_model=None, layer_indices=[], batch_size=32):
+    def calc_robustness(test_data, model, source_weights_model=None, layer_indices=None, batch_size=32):
         """
         Evaluates the model on test data after re-initializing the layers
         with indices specified.
@@ -156,6 +156,8 @@ class Experiment(Verbose):
         :param batch_size: used in evaluation
         :return: A number in the interval [0,1] representing accuracy.
         """
+        if not layer_indices:
+            layer_indices = []
         x_test, y_test = test_data
         prev_weights = model.get_weights()
         if source_weights_model:
