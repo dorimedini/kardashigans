@@ -20,8 +20,7 @@ class FCTrainer(Verbose):
                  output_activation='softmax',
                  optimizer=optimizers.SGD(momentum=0.9, nesterov=True),
                  loss='sparse_categorical_crossentropy',
-                 metrics=['accuracy'],
-                 checkpoint_callbacks=[]):
+                 metrics=['accuracy']):
         """
         :param dataset: keras.datasets.mnist, for example
         :param verbose: Logging on / off
@@ -48,7 +47,7 @@ class FCTrainer(Verbose):
         self._optimizer = optimizer
         self._loss = loss
         self._metrics = metrics
-        self._checkpoint_callbacks = checkpoint_callbacks
+        self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
         (self._x_train, self._y_train), (self._x_test, self._y_test) = self._load_data_normalized()
         self._shape = (np.prod(self._x_train.shape[1:]),)
