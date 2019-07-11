@@ -5,6 +5,7 @@ import pytz
 import seaborn as sns
 from kardashigans.resource_manager import ResourceManager
 from kardashigans.verbose import Verbose
+from keras import backend as K
 
 
 class Experiment(Verbose):
@@ -125,10 +126,10 @@ class Experiment(Verbose):
         return name[name.rfind(".") + 1:]
 
     @staticmethod
-    def reset_layers(model, layers):
-        assert max(layers) < len(model.layers)
+    def rernd_layers(model, layers_indices):
+        assert max(layers_indices) < len(model.layers)
         session = K.get_session()
-        for idx in layers:
+        for idx in layers_indices:
             layer = model.layers[idx]
             for v in layer.__dict__:
                 v_arg = getattr(layer, v)
@@ -139,26 +140,33 @@ class Experiment(Verbose):
     @staticmethod
     def calc_robustness(test_data, model, source_weights_model=None, layer_indices=[], batch_size=32):
         """
-        Evaluates the model on test data.
+        Evaluates the model on test data after re-initializing the layers
+        with indices specified.
 
-        Optionally, if source_weights_model is given, sets the weights
+        Alternatively, if source_weights_model is given, sets the weights
         of the model (for layer indices appearing in layer_indices) at
         each given layer to the weights of source_weights_model.
+
+        Function resets model weights to previous state before returning.
 
         :param test_data: A tuple (x_test, y_test) for validation
         :param model: The model to evaluate
         :param source_weights_model: The model from which we should
             copy weights and update our model's weights before eval.
         :param layer_indices: Layers to reset the weights of.
-        :param batch_size: Self explanatory
+        :param batch_size: used in evaluation
         :return: A number in the interval [0,1] representing accuracy.
         """
         x_test, y_test = test_data
+        prev_weights = model.get_weights()
         if source_weights_model:
             for idx in layer_indices:
                 loaded_weights = source_weights_model.layers[idx].get_weights()
                 model.layers[idx].set_weights(loaded_weights)
+        else:
+            Experiment.rernd_layers(model, layer_indices)
         evaluated_metrics = model.evaluate(x_test, y_test, batch_size=batch_size)
+        model.set_weights(prev_weights)
         return evaluated_metrics[model.metrics_names.index('acc')]
 
     def _dataset_fit(self, model_name, force=False):
