@@ -23,8 +23,8 @@ class Baseline(ExperimentWithCheckpoints):
                  root_dir='/content/drive/My Drive/globi/',
                  resource_load_dir=None,
                  verbose=False):
-        mnist_name = Baseline.get_model_name('mnist')
-        cifar10_name = Baseline.get_model_name('cifar10')
+        mnist_name = Baseline.get_model_name(Experiment.get_dataset_name(mnist))
+        cifar10_name = Baseline.get_model_name(Experiment.get_dataset_name(cifar10))
         super(Baseline, self).__init__(name='Baseline',
                                        model_names=[mnist_name, cifar10_name],
                                        verbose=verbose,
@@ -34,6 +34,7 @@ class Baseline(ExperimentWithCheckpoints):
                                        },
                                        root_dir=root_dir,
                                        resource_load_dir=resource_load_dir)
+        self._dataset_names = [Experiment.get_dataset_name(dataset) for dataset in [mnist, cifar10]]
 
     @staticmethod
     def get_model_name(dataset_name):
@@ -92,12 +93,13 @@ class Baseline(ExperimentWithCheckpoints):
                          batch_size=Baseline.get_dataset_batch_size(dataset_name),
                          optimizer=Baseline.get_dataset_optimizer(dataset_name))
 
-    def _phase1_dataset_robustness(self, model_name):
+    def _phase1_dataset_robustness(self, dataset_name):
+        model_name = Baseline.get_model_name(dataset_name)
         model = self._dataset_fit(model_name)
         test_set = self._test_sets[model_name]
         clean_results = Experiment.calc_robustness(test_data=(test_set['x'], test_set['y']),
                                                    model=model,
-                                                   batch_size=Baseline.get_dataset_batch_size(model_name))
+                                                   batch_size=Baseline.get_dataset_batch_size(dataset_name))
         if 'start' not in model.saved_checkpoints:
             self._print("Missing 'start' checkpoint in phase1, cannot continue")
             return [clean_results] + [0 for i in range(len(model.layers))]
@@ -105,7 +107,7 @@ class Baseline(ExperimentWithCheckpoints):
                                                  model=model,
                                                  source_weights_model=model.saved_checkpoints['start'],
                                                  layer_indices=[i],
-                                                 batch_size=Baseline.get_dataset_batch_size(model_name))
+                                                 batch_size=Baseline.get_dataset_batch_size(dataset_name))
                       for i in range(len(model.layers))]
         robustness = [clean_results] + robustness
         self._print("{} robustness: by layer: {}".format(model_name, robustness))
@@ -116,9 +118,9 @@ class Baseline(ExperimentWithCheckpoints):
     def phase1(self):
         data = []
         rows = []
-        for model_name in self._model_names:
-            data += [self._phase1_dataset_robustness(model_name)]
-            rows += [model_name]
+        for dataset_name in self._dataset_names:
+            data += [self._phase1_dataset_robustness(dataset_name)]
+            rows += [Baseline.get_model_name(dataset_name)]
         self._print("Robustness results: got {} rows, with {} columns on the first row, "
                     "row labels are {}".format(len(data), len(data[0]), rows))
         n_layers = len(data[0]) - 1
@@ -127,13 +129,14 @@ class Baseline(ExperimentWithCheckpoints):
                               col_labels=["Baseline"] + ["Layer %d" % i for i in range(n_layers)],
                               filename="phase1_heatmap.png")
 
-    def _phase2_dataset_robustness_by_epoch(self, model_name, layer):
+    def _phase2_dataset_robustness_by_epoch(self, dataset_name, layer):
+        model_name = Baseline.get_model_name(dataset_name)
         checkpoints = self._resource_manager.get_checkpoint_epoch_keys()
         model = self._dataset_fit(model_name)
         test_set = self._test_sets[model_name]
         clean_results = Experiment.calc_robustness(test_data=(test_set['x'], test_set['y']),
                                                    model=model,
-                                                   batch_size=Baseline.get_dataset_batch_size(model_name))
+                                                   batch_size=Baseline.get_dataset_batch_size(dataset_name))
         for i in checkpoints:
             if i not in model.saved_checkpoints:
                 self._print("Missing checkpoint at epoch {} in phase2, cannot continue".format(i))
@@ -142,7 +145,7 @@ class Baseline(ExperimentWithCheckpoints):
                                                  model=model,
                                                  source_weights_model=model.saved_checkpoints[epoch],
                                                  layer_indices=[layer],
-                                                 batch_size=Baseline.get_dataset_batch_size(model_name))
+                                                 batch_size=Baseline.get_dataset_batch_size(dataset_name))
                       for epoch in checkpoints]
         robustness = [clean_results] + robustness
         self._print("{} robustness of layer {} by epoch: {}".format(model_name, layer, robustness))
@@ -154,17 +157,17 @@ class Baseline(ExperimentWithCheckpoints):
         # Rows are layers, columns are epochs from which the weights were
         # taken.
         epochs = self._resource_manager.get_checkpoint_epoch_keys()
-        for model_name in self._model_names:
-            self._print("Running phase2 on {}".format(model_name))
+        for dataset_name in self._dataset_names:
+            self._print("Running phase2 on {}".format(dataset_name))
             data = []
             rows = []
-            for layer in range(Baseline.get_dataset_n_layers(model_name)):
-                data += [self._phase2_dataset_robustness_by_epoch(model_name, layer)]
+            for layer in range(Baseline.get_dataset_n_layers(dataset_name)):
+                data += [self._phase2_dataset_robustness_by_epoch(dataset_name, layer)]
                 rows += ["Layer {}".format(layer)]
             self.generate_heatmap(data=data,
                                   row_labels=rows,
                                   col_labels=["Baseline"] + ["Epoch {}".format(e) for e in epochs],
-                                  filename="phase2_{}_heatmap.png".format(model_name))
+                                  filename="phase2_{}_heatmap.png".format(dataset_name))
 
     def go(self):
         self.phase1()
