@@ -214,15 +214,15 @@ class Experiment(Verbose):
 class ExperimentWithCheckpoints(Experiment):
     def __init__(self, *args, **kwargs):
         super(ExperimentWithCheckpoints, self).__init__(*args, **kwargs)
-        self._update_epoch_checkpoint_callbacks()
+        self._add_epoch_checkpoint_callback()
 
     def get_epoch_save_period(self):
         return self._resource_manager.get_epoch_save_period()
 
-    def _update_epoch_checkpoint_callbacks(self):
+    def _add_epoch_checkpoint_callback(self):
         for name in self._model_names:
             cb = self._resource_manager.get_epoch_save_callback(name)
-            self._trainers[name].set_checkpoint_callbacks([cb])
+            self._trainers[name].add_checkpoint_callback(cb)
 
     def _try_load_model_with_checkpoints(self, model_name):
         model = self._resource_manager.try_load_model(model_name)

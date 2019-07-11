@@ -145,8 +145,8 @@ class FCTrainer(Verbose):
     def get_test_data(self):
         return self._x_test, self._y_test
 
-    def set_checkpoint_callbacks(self, callbacks=[]):
-        self._checkpoint_callbacks = callbacks
+    def add_checkpoint_callback(self, callback):
+        self._checkpoint_callbacks.append(callback)
 
 
 class FCFreezeTrainer(FCTrainer):
