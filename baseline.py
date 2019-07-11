@@ -35,6 +35,15 @@ class Baseline(ExperimentWithCheckpoints):
                                        resource_load_dir=resource_load_dir)
 
     @staticmethod
+    def get_model_name(dataset_name):
+        return "{dataset}_fc{layers}_batch{batch}_epochs{epochs}_{opt}" \
+               "".format(dataset=dataset_name,
+                         layers=Baseline.get_dataset_n_layers(dataset_name),
+                         batch=Baseline.get_dataset_batch_size(dataset_name),
+                         epochs=Baseline.get_dataset_n_epochs(dataset_name),
+                         opt=Baseline.get_dataset_optimizer_string(dataset_name))
+
+    @staticmethod
     def get_dataset_n_epochs(dataset_name):
         if dataset_name == 'mnist':
             return 100
