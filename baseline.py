@@ -23,13 +23,14 @@ class Baseline(ExperimentWithCheckpoints):
                  root_dir='/content/drive/My Drive/globi/',
                  resource_load_dir=None,
                  verbose=False):
-        # Map model names to dataset names on which they run ('phase1_mnist' -> 'mnist')
+        mnist_name = Baseline.get_model_name('mnist')
+        cifar10_name = Baseline.get_model_name('cifar10')
         super(Baseline, self).__init__(name='Baseline',
-                                       model_names=['mnist', 'cifar10'],
+                                       model_names=[mnist_name, cifar10_name],
                                        verbose=verbose,
                                        trainers={
-                                           'mnist': Baseline.construct_dataset_trainer(mnist, verbose),
-                                           'cifar10': Baseline.construct_dataset_trainer(cifar10, verbose)
+                                           mnist_name: Baseline.construct_dataset_trainer(mnist, verbose),
+                                           cifar10_name: Baseline.construct_dataset_trainer(cifar10, verbose)
                                        },
                                        root_dir=root_dir,
                                        resource_load_dir=resource_load_dir)
