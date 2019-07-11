@@ -54,10 +54,6 @@ class FCTrainer(Verbose):
         self._shape = (np.prod(self._x_train.shape[1:]),)
         self._print("Data shape: {}".format(self._shape))
 
-    def _print(self, *args, **kwargs):
-        if self._verbose:
-            print(*args, **kwargs)
-
     def _load_data_normalized(self):
         self._print("Loading and normalizing data.")
         (x_train, y_train), (x_test, y_test) = self._dataset.load_data()
