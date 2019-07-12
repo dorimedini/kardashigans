@@ -199,6 +199,22 @@ class Experiment(Verbose):
             self._print("Already trained model for {}, returning it".format(model_name))
         return self._trained_models[model_name]
 
+    def _get_model(self, model_name):
+        """
+        Used by the context manager. Tries to load the model, if it doesn't
+        work the model is trained.
+        """
+        assert model_name in self._model_names, \
+            "Model '{}' not listed in {}".format(model_name, self._model_names)
+        try:
+            return self._load_model(model_name)
+        except:
+            # If the load failed, or for some reason we need to fit the model:
+            self._print("Fitting dataset {}".format(model_name))
+            model = self._trainers[model_name].go()
+            self._resource_manager.save_model(model, model_name)
+            return model
+
     def _post_fit(self, model_name):
         pass
 
@@ -225,6 +241,24 @@ class ExperimentWithCheckpoints(Experiment):
         for name in self._model_names:
             cb = self._resource_manager.get_epoch_save_callback(name)
             self._trainers[name].add_checkpoint_callback(cb)
+
+    def _get_model_at_epoch(self, model_name, epoch):
+        """
+        This method may throw error! Unlike Experiment._get_model, we
+        don't want to train the entire model just because we're missing
+        an epoch, if you try to load an epoch from an untrained model
+        you're going to have a bad time anyway.
+
+        :param model_name: Model name
+        :param epoch: A number, or 'start'/'end'
+        :return: The loaded model
+        """
+        assert model_name in self._model_names, \
+            "Model '{}' not listed in {}".format(model_name, self._model_names)
+        model = self._resource_manager.try_load_model_at_epoch(model_name, epoch)
+        if model:
+            return model
+        raise ValueError("Couldn't load model {} at epoch {}".format(model_name, epoch))
 
     def _try_load_model_with_checkpoints(self, model_name):
         model = self._resource_manager.try_load_model(model_name)
