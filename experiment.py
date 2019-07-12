@@ -216,7 +216,7 @@ class Experiment(Verbose):
 
     def go(self):
         """ Implement this in inheriting classes """
-        pass
+        raise NotImplementedError
 
     class _model_context(object):
         def __init__(self, experiment, model_name):
