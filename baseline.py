@@ -60,6 +60,11 @@ class Baseline(ExperimentWithCheckpoints):
             return 3
 
     @staticmethod
+    def get_dataset_n_parameter_layers(dataset_name):
+        """ N hidden layers + input/output layers = N+1 parameter layers """
+        return Baseline.get_dataset_n_layers(dataset_name) + 1
+
+    @staticmethod
     def get_dataset_optimizer(dataset_name):
         if dataset_name == 'mnist':
             return optimizers.SGD(momentum=0.9, nesterov=True)
@@ -161,7 +166,7 @@ class Baseline(ExperimentWithCheckpoints):
             self._print("Running phase2 on {}".format(dataset_name))
             data = []
             rows = []
-            for layer in range(Baseline.get_dataset_n_layers(dataset_name)):
+            for layer in range(Baseline.get_dataset_n_parameter_layers(dataset_name)):
                 data += [self._phase2_dataset_robustness_by_epoch(dataset_name, layer)]
                 rows += ["Layer {}".format(layer)]
             self.generate_heatmap(data=data,
