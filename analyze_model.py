@@ -1,3 +1,10 @@
+import numpy as np
+import collections
+import matplotlib.pylab as plt
+import seaborn as sns
+from kardashigans.experiment import Experiment
+from kardashigans.verbose import Verbose
+
 class AnalyzeModel(object):
     """
     Static class for model analysis.
@@ -54,3 +61,24 @@ class AnalyzeModel(object):
                     distance_list[layer].append(
                         np.linalg.norm(model_flatten_weights - source_flatten_weights, ord=order))
         return distance_list
+
+    @staticmethod
+    def generate_heatmap(data, row_labels, col_labels, filename, output_dir, verbose=True):
+        """
+        Creates a heatmap image from the data, outputs to file.
+
+        :param data: List of lists of float values, indexed by data[row][column].
+        :param row_labels: Size len(data) list of strings
+        :param col_labels: Size len(data[0]) list of strings
+        :param filename: Output filename, relative to the experiment results
+            directory.
+        """
+        printer = Verbose(verbose)
+        printer._print("Generating heatmap. Data: {}".format(data))
+        printer._print("Rows: {}".format(row_labels))
+        printer._print("Cols: {}".format(col_labels))
+        ax = sns.heatmap(data, linewidth=0.5, xticklabels=col_labels, yticklabels=row_labels)
+        fig = ax.get_figure()
+        fig.savefig(output_dir + filename)
+        if verbose:
+            plt.show()

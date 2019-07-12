@@ -2,10 +2,8 @@ from datetime import datetime
 from keras import optimizers
 from keras.datasets import mnist, cifar10
 from keras.models import model_from_json
-import matplotlib.pylab as plt
 import os
 import pytz
-import seaborn as sns
 from kardashigans.experiment import Experiment, ExperimentWithCheckpoints
 from kardashigans.analyze_model import AnalyzeModel
 from kardashigans.trainer import FCTrainer
@@ -125,10 +123,12 @@ class Baseline(ExperimentWithCheckpoints):
         self._print("Robustness results: got {} rows, with {} columns on the first row, "
                     "row labels are {}".format(len(data), len(data[0]), rows))
         n_layers = len(data[0]) - 1
-        self.generate_heatmap(data=data,
+        AnalyzeModel.generate_heatmap(data=data,
                               row_labels=rows,
                               col_labels=["Baseline"] + ["Layer %d" % i for i in range(n_layers)],
-                              filename="phase1_heatmap.png")
+                              filename="phase1_heatmap.png",
+                              output_dir=self._results_dir,
+                              verbose=self._verbose)
 
     def _phase2_dataset_robustness_by_epoch(self, dataset_name, layer):
         model_name = Baseline.get_model_name(dataset_name)
@@ -165,10 +165,12 @@ class Baseline(ExperimentWithCheckpoints):
             for layer in range(Baseline.get_dataset_n_layers(dataset_name)):
                 data += [self._phase2_dataset_robustness_by_epoch(dataset_name, layer)]
                 rows += ["Layer {}".format(layer)]
-            self.generate_heatmap(data=data,
-                                  row_labels=rows,
-                                  col_labels=["Baseline"] + ["Epoch {}".format(e) for e in epochs],
-                                  filename="phase2_{}_heatmap.png".format(dataset_name))
+            AnalyzeModel.generate_heatmap(data=data,
+                                          row_labels=rows,
+                                          col_labels=["Baseline"] + ["Epoch {}".format(e) for e in epochs],
+                                          filename="phase2_{}_heatmap.png".format(dataset_name),
+                                          output_dir=self._results_dir,
+                                          verbose=self._verbose)
 
     def go(self):
         self.phase1()

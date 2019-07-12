@@ -1,13 +1,9 @@
 from datetime import datetime
-import matplotlib.pylab as plt
 import os
 import pytz
-import seaborn as sns
 from kardashigans.resource_manager import ResourceManager
 from kardashigans.verbose import Verbose
 from keras import backend as K
-import numpy as np
-import collections
 
 
 class Experiment(Verbose):
@@ -98,25 +94,6 @@ class Experiment(Verbose):
 
     def _load_model(self, model_name):
         return self._resource_manager.load_model(model_name)
-
-    def generate_heatmap(self, data, row_labels, col_labels, filename):
-        """
-        Creates a heatmap image from the data, outputs to file.
-
-        :param data: List of lists of float values, indexed by data[row][column].
-        :param row_labels: Size len(data) list of strings
-        :param col_labels: Size len(data[0]) list of strings
-        :param filename: Output filename, relative to the experiment results
-            directory.
-        """
-        self._print("Generating heatmap. Data: {}".format(data))
-        self._print("Rows: {}".format(row_labels))
-        self._print("Cols: {}".format(col_labels))
-        ax = sns.heatmap(data, linewidth=0.5, xticklabels=col_labels, yticklabels=row_labels)
-        fig = ax.get_figure()
-        fig.savefig(self._results_dir + filename)
-        if self._verbose:
-            plt.show()
 
     def get_test_data(self, model_name):
         test_set = self._test_sets[model_name]
