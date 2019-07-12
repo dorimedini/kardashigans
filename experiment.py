@@ -47,7 +47,6 @@ class Experiment(Verbose):
         self._trainers = trainers
         self._root_dir = root_dir
         self._resource_load_dir = resource_load_dir  # Gets default value if None
-        self._trained_models = {}
         self._setup_env()
         self._resource_manager = ResourceManager(model_save_dir=self._models_dir,
                                                  model_load_dir=self._resource_load_dir,
@@ -170,35 +169,6 @@ class Experiment(Verbose):
         model.set_weights(prev_weights)
         return evaluated_metrics[model.metrics_names.index('acc')]
 
-    def _dataset_fit(self, model_name, force=False):
-        """
-        Trains a model, or loads from file if a path exists using the
-        ResourceManager.
-
-        If the model was already trained locally, simply returns the existing
-        model (unless forced to re-train).
-
-        :param model_name: The (unique) name of the model to train / load.
-        :param force: If set to True, will re-train the model even if it was
-            locally trained. Also overrides loading model from disk.
-        :return: The trained model.
-        """
-        assert model_name in self._model_names, \
-            "Model '{}' not listed in {}".format(model_name, self._model_names)
-        if force or (model_name not in self._trained_models):
-            if not force:
-                self.try_load_model(model_name)
-            # If the load failed, or for some reason we need to fit the model:
-            if model_name not in self._trained_models:
-                self._print("Fitting dataset {}".format(model_name))
-                model = self._trainers[model_name].go()
-                self._trained_models[model_name] = model
-                self._resource_manager.save_model(model, model_name)
-                self._post_fit(model_name)
-        else:
-            self._print("Already trained model for {}, returning it".format(model_name))
-        return self._trained_models[model_name]
-
     def _get_model(self, model_name):
         """
         Used by the context manager. Tries to load the model, if it doesn't
@@ -223,15 +193,6 @@ class Experiment(Verbose):
             ...
         """
         return Experiment._model_context(self, model_name)
-
-    def _post_fit(self, model_name):
-        pass
-
-    def try_load_model(self, model_name):
-        """ Tries to read disk and load model to _trained_models """
-        model = self._resource_manager.try_load_model(model_name)
-        if model:
-            self._trained_models[model_name] = model
 
     def go(self):
         """ Implement this in inheriting classes """
@@ -303,32 +264,3 @@ class ExperimentWithCheckpoints(Experiment):
             else:
                 self._model = self._exp._get_model_at_epoch(self._model_name, self._epoch)
             return self._model
-
-    def _try_load_model_with_checkpoints(self, model_name):
-        model = self._resource_manager.try_load_model(model_name)
-        if not model:
-            self._print("Failed to load model {} entirely".format(model_name))
-            return None
-        model.saved_checkpoints = self._resource_manager.try_load_model_checkpoints(
-            model_name=model_name,
-            period=self.get_epoch_save_period()
-        )
-        if not model.saved_checkpoints:
-            self._print("Model {} loaded, but failed to load checkpoints".format(model_name))
-        return model
-
-    def try_load_model(self, model_name):
-        """ Override this (from superclass) to load checkpoints also """
-        self._print("In try_load_model, ExperimentWithCheckpoints version")
-        model = self._try_load_model_with_checkpoints(model_name)
-        if model:
-            self._trained_models[model_name] = model
-
-    def _post_fit(self, model_name):
-        model_with_checkpoints = self._try_load_model_with_checkpoints(model_name)
-        if model_with_checkpoints:
-            self._trained_models[model_name].saved_checkpoints = model_with_checkpoints.saved_checkpoints
-        else:
-            self._print("Couldn't load model {}".format(model_name))
-        if not model_with_checkpoints.saved_checkpoints:
-            self._print("Couldn't load checkpoints of model {}".format(model_name))
