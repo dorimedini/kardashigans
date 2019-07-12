@@ -7,6 +7,7 @@ import os
 import pytz
 import seaborn as sns
 from kardashigans.experiment import Experiment, ExperimentWithCheckpoints
+from kardashigans.analyze_model import AnalyzeModel
 from kardashigans.trainer import FCTrainer
 
 
@@ -97,13 +98,13 @@ class Baseline(ExperimentWithCheckpoints):
         model_name = Baseline.get_model_name(dataset_name)
         model = self._dataset_fit(model_name)
         test_set = self._test_sets[model_name]
-        clean_results = Experiment.calc_robustness(test_data=(test_set['x'], test_set['y']),
+        clean_results = AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
                                                    model=model,
                                                    batch_size=Baseline.get_dataset_batch_size(dataset_name))
         if 'start' not in model.saved_checkpoints:
             self._print("Missing 'start' checkpoint in phase1, cannot continue")
             return [clean_results] + [0 for i in range(len(model.layers))]
-        robustness = [Experiment.calc_robustness(test_data=(test_set['x'], test_set['y']),
+        robustness = [AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
                                                  model=model,
                                                  source_weights_model=model.saved_checkpoints['start'],
                                                  layer_indices=[i],
@@ -134,14 +135,14 @@ class Baseline(ExperimentWithCheckpoints):
         checkpoints = self._resource_manager.get_checkpoint_epoch_keys()
         model = self._dataset_fit(model_name)
         test_set = self._test_sets[model_name]
-        clean_results = Experiment.calc_robustness(test_data=(test_set['x'], test_set['y']),
+        clean_results = AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
                                                    model=model,
                                                    batch_size=Baseline.get_dataset_batch_size(dataset_name))
         for i in checkpoints:
             if i not in model.saved_checkpoints:
                 self._print("Missing checkpoint at epoch {} in phase2, cannot continue".format(i))
                 return [clean_results] + [0 for i in range(len(checkpoints))]
-        robustness = [Experiment.calc_robustness(test_data=(test_set['x'], test_set['y']),
+        robustness = [AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
                                                  model=model,
                                                  source_weights_model=model.saved_checkpoints[epoch],
                                                  layer_indices=[layer],
