@@ -65,7 +65,7 @@ class ResourceManager(Verbose):
         """
         Loads saved models at specific epochs. Intended for use with
         get_epoch_save_callback (used by Experiment objects via the
-        Trainer's set_checkpoint_callbacks method).
+        Trainer's add_checkpoint_callback method).
 
         Will attempt to load start / end models and a model for each
         epoch given in the period parameter, will print error if
@@ -100,10 +100,10 @@ class ResourceManager(Verbose):
 
 
 class SaveModelAtEpochsCallback(Callback):
-    def __init__(self, filepath_template, period=[], verbose=False):
+    def __init__(self, filepath_template, period=None, verbose=False):
         super(SaveModelAtEpochsCallback, self).__init__()
         self.filepath_template = filepath_template
-        self.period = period
+        self.period = period if period else []
         self._printer = Verbose(verbose=verbose)
 
     def on_train_begin(self, logs=None):
