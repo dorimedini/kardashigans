@@ -182,8 +182,12 @@ class Experiment(Verbose):
         for layer in layer_indices:
             source_weights = source_weights_model.layers[layer].get_weights()
             model_weights = model.layers[layer].get_weights()
-            for order in norm_orders:
-                distance_list[layer].append(np.linalg.norm(model_weights - source_weights, ord=order))
+            if source_weights and model_weights:
+                source_flatten_weights = np.concatenate([source_w.flatten() for source_w in source_weights])
+                model_flatten_weights = np.concatenate([model_w.flatten() for model_w in model_weights])
+                for order in norm_orders:
+                    distance_list[layer].append(
+                        np.linalg.norm(model_flatten_weights - source_flatten_weights, ord=order))
         return distance_list
 
 
