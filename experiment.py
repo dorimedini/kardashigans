@@ -215,6 +215,15 @@ class Experiment(Verbose):
             self._resource_manager.save_model(model, model_name)
             return model
 
+    def open_model(self, model_name):
+        """
+        Use this to read trained model to local memory. Used in inheriting classes like:
+        with self.open_model('mnist_fc3_vanilla') as model:
+            model.get_weights()
+            ...
+        """
+        return Experiment._model_context(self, model_name)
+
     def _post_fit(self, model_name):
         pass
 
@@ -277,6 +286,11 @@ class ExperimentWithCheckpoints(Experiment):
         if model:
             return model
         raise ValueError("Couldn't load model {} at epoch {}".format(model_name, epoch))
+
+    def open_model_at_epoch(self, model_name, epoch):
+        return ExperimentWithCheckpoints._model_at_epoch_context(experiment=self,
+                                                                 model_name=model_name,
+                                                                 epoch=epoch)
 
     class _model_at_epoch_context(Experiment._model_context):
         def __init__(self, experiment, model_name, epoch=None):
