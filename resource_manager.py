@@ -73,6 +73,9 @@ class ResourceManager(Verbose):
                 self._print("Couldn't even load model from {}".format(self._get_model_save_fullpath(model_name)))
         return None
 
+    def try_load_model_at_epoch(self, model_name, epoch):
+        return self.try_load_model(self._get_checkpoint_model_name(model_name, epoch))
+
     def try_load_model_checkpoints(self, model_name, period):
         """
         Loads saved models at specific epochs. Intended for use with
@@ -92,8 +95,8 @@ class ResourceManager(Verbose):
             parameter (if successful)
         """
         epoch_model_map = {}
-        start_model = self.try_load_model(self._get_checkpoint_model_name(model_name, 'start'))
-        end_model = self.try_load_model(self._get_checkpoint_model_name(model_name, 'end'))
+        start_model = self.try_load_model_at_epoch(model_name, 'start')
+        end_model = self.try_load_model_at_epoch(model_name, 'end')
         if start_model:
             epoch_model_map['start'] = start_model
         else:
@@ -103,7 +106,7 @@ class ResourceManager(Verbose):
         else:
             self._print("No end epoch found (tried {})".format(end_model))
         for epoch in period:
-            epoch_model = self.try_load_model(self._get_checkpoint_model_name(model_name, epoch))
+            epoch_model = self.try_load_model_at_epoch(model_name, epoch)
             if epoch_model:
                 epoch_model_map[epoch] = epoch_model
             else:
