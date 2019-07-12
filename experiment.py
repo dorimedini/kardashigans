@@ -6,6 +6,8 @@ import seaborn as sns
 from kardashigans.resource_manager import ResourceManager
 from kardashigans.verbose import Verbose
 from keras import backend as K
+import numpy as np
+import collections
 
 
 class Experiment(Verbose):
@@ -169,6 +171,25 @@ class Experiment(Verbose):
         evaluated_metrics = model.evaluate(x_test, y_test, batch_size=batch_size)
         model.set_weights(prev_weights)
         return evaluated_metrics[model.metrics_names.index('acc')]
+
+    @staticmethod
+    def get_weight_distances(model, source_weights_model, layer_indices=[], norm_orders=[]):
+        """
+        Computes distances between the layers of the given model and source model, in the chosen layers.
+        Returns a dictionary in format: {idx: [dists (in the same order as the given list of distances)]}.
+        """
+        distance_list = collections.defaultdict(list)
+        for layer in layer_indices:
+            source_weights = source_weights_model.layers[layer].get_weights()
+            model_weights = model.layers[layer].get_weights()
+            if source_weights and model_weights:
+                source_flatten_weights = np.concatenate([source_w.flatten() for source_w in source_weights])
+                model_flatten_weights = np.concatenate([model_w.flatten() for model_w in model_weights])
+                for order in norm_orders:
+                    distance_list[layer].append(
+                        np.linalg.norm(model_flatten_weights - source_flatten_weights, ord=order))
+        return distance_list
+
 
     def _dataset_fit(self, model_name, force=False):
         """
