@@ -250,11 +250,14 @@ class ExperimentWithCheckpoints(Experiment):
     def _try_load_model_with_checkpoints(self, model_name):
         model = self._resource_manager.try_load_model(model_name)
         if not model:
+            self._print("Failed to load model {} entirely".format(model_name))
             return None
         model.saved_checkpoints = self._resource_manager.try_load_model_checkpoints(
             model_name=model_name,
             period=self.get_epoch_save_period()
         )
+        if not model.saved_checkpoints:
+            self._print("Model {} loaded, but failed to load checkpoints".format(model_name))
         return model
 
     def try_load_model(self, model_name):
@@ -269,4 +272,6 @@ class ExperimentWithCheckpoints(Experiment):
         if model_with_checkpoints:
             self._trained_models[model_name].saved_checkpoints = model_with_checkpoints.saved_checkpoints
         else:
-            self._print("Couldn't load checkpoint data for model {}".format(model_name))
+            self._print("Couldn't load model {}".format(model_name))
+        if not model_with_checkpoints.saved_checkpoints:
+            self._print("Couldn't load checkpoints of model {}".format(model_name))
