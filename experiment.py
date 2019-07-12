@@ -49,7 +49,6 @@ class Experiment(Verbose):
         self._trainers = trainers
         self._root_dir = root_dir
         self._resource_load_dir = resource_load_dir  # Gets default value if None
-        self._trained_models = {}
         self._setup_env()
         self._resource_manager = ResourceManager(model_save_dir=self._models_dir,
                                                  model_load_dir=self._resource_load_dir,
@@ -190,48 +189,52 @@ class Experiment(Verbose):
                         np.linalg.norm(model_flatten_weights - source_flatten_weights, ord=order))
         return distance_list
 
-
-    def _dataset_fit(self, model_name, force=False):
+    def _get_model(self, model_name):
         """
-        Trains a model, or loads from file if a path exists using the
-        ResourceManager.
-
-        If the model was already trained locally, simply returns the existing
-        model (unless forced to re-train).
-
-        :param model_name: The (unique) name of the model to train / load.
-        :param force: If set to True, will re-train the model even if it was
-            locally trained. Also overrides loading model from disk.
-        :return: The trained model.
+        Used by the context manager. Tries to load the model, if it doesn't
+        work the model is trained.
         """
         assert model_name in self._model_names, \
             "Model '{}' not listed in {}".format(model_name, self._model_names)
-        if force or (model_name not in self._trained_models):
-            if not force:
-                self.try_load_model(model_name)
+        try:
+            return self._load_model(model_name)
+        except:
             # If the load failed, or for some reason we need to fit the model:
-            if model_name not in self._trained_models:
-                self._print("Fitting dataset {}".format(model_name))
-                model = self._trainers[model_name].go()
-                self._trained_models[model_name] = model
-                self._resource_manager.save_model(model, model_name)
-                self._post_fit(model_name)
-        else:
-            self._print("Already trained model for {}, returning it".format(model_name))
-        return self._trained_models[model_name]
+            self._print("Fitting dataset {}".format(model_name))
+            model = self._trainers[model_name].go()
+            self._resource_manager.save_model(model, model_name)
+            return model
 
-    def _post_fit(self, model_name):
-        pass
-
-    def try_load_model(self, model_name):
-        """ Tries to read disk and load model to _trained_models """
-        model = self._resource_manager.try_load_model(model_name)
-        if model:
-            self._trained_models[model_name] = model
+    def open_model(self, model_name):
+        """
+        Use this to read trained model to local memory. Used in inheriting classes like:
+        with self.open_model('mnist_fc3_vanilla') as model:
+            model.get_weights()
+            ...
+        """
+        return Experiment._model_context(self, model_name)
 
     def go(self):
         """ Implement this in inheriting classes """
         pass
+
+    class _model_context(object):
+        def __init__(self, experiment, model_name):
+            # The context needs access to Trainers / ResourceManager
+            # so it makes sense to demand the calling experiment as
+            # an interface.
+            # No inheriting class will need to manually create a
+            # _model_context anyway so the Experiment class can handle
+            # the ugly
+            self._exp = experiment
+            self._model_name = model_name
+
+        def __enter__(self):
+            self._model = self._exp._get_model(self._model_name)
+            return self._model
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            del self._model
 
 
 class ExperimentWithCheckpoints(Experiment):
@@ -247,31 +250,37 @@ class ExperimentWithCheckpoints(Experiment):
             cb = self._resource_manager.get_epoch_save_callback(name)
             self._trainers[name].add_checkpoint_callback(cb)
 
-    def _try_load_model_with_checkpoints(self, model_name):
-        model = self._resource_manager.try_load_model(model_name)
-        if not model:
-            self._print("Failed to load model {} entirely".format(model_name))
-            return None
-        model.saved_checkpoints = self._resource_manager.try_load_model_checkpoints(
-            model_name=model_name,
-            period=self.get_epoch_save_period()
-        )
-        if not model.saved_checkpoints:
-            self._print("Model {} loaded, but failed to load checkpoints".format(model_name))
-        return model
+    def _get_model_at_epoch(self, model_name, epoch):
+        """
+        This method may throw error! Unlike Experiment._get_model, we
+        don't want to train the entire model just because we're missing
+        an epoch, if you try to load an epoch from an untrained model
+        you're going to have a bad time anyway.
 
-    def try_load_model(self, model_name):
-        """ Override this (from superclass) to load checkpoints also """
-        self._print("In try_load_model, ExperimentWithCheckpoints version")
-        model = self._try_load_model_with_checkpoints(model_name)
+        :param model_name: Model name
+        :param epoch: A number, or 'start'/'end'
+        :return: The loaded model
+        """
+        assert model_name in self._model_names, \
+            "Model '{}' not listed in {}".format(model_name, self._model_names)
+        model = self._resource_manager.try_load_model_at_epoch(model_name, epoch)
         if model:
-            self._trained_models[model_name] = model
+            return model
+        raise ValueError("Couldn't load model {} at epoch {}".format(model_name, epoch))
 
-    def _post_fit(self, model_name):
-        model_with_checkpoints = self._try_load_model_with_checkpoints(model_name)
-        if model_with_checkpoints:
-            self._trained_models[model_name].saved_checkpoints = model_with_checkpoints.saved_checkpoints
-        else:
-            self._print("Couldn't load model {}".format(model_name))
-        if not model_with_checkpoints.saved_checkpoints:
-            self._print("Couldn't load checkpoints of model {}".format(model_name))
+    def open_model_at_epoch(self, model_name, epoch):
+        return ExperimentWithCheckpoints._model_at_epoch_context(experiment=self,
+                                                                 model_name=model_name,
+                                                                 epoch=epoch)
+
+    class _model_at_epoch_context(Experiment._model_context):
+        def __init__(self, experiment, model_name, epoch=None):
+            Experiment._model_context.__init__(self, experiment=experiment, model_name=model_name)
+            self._epoch = epoch
+
+        def __enter__(self):
+            if not self._epoch:
+                self._model = self._exp._get_model(self._model_name)
+            else:
+                self._model = self._exp._get_model_at_epoch(self._model_name, self._epoch)
+            return self._model
