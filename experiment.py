@@ -228,6 +228,24 @@ class Experiment(Verbose):
         """ Implement this in inheriting classes """
         pass
 
+    class _model_context(object):
+        def __init__(self, experiment, model_name):
+            # The context needs access to Trainers / ResourceManager
+            # so it makes sense to demand the calling experiment as
+            # an interface.
+            # No inheriting class will need to manually create a
+            # _model_context anyway so the Experiment class can handle
+            # the ugly
+            self._exp = experiment
+            self._model_name = model_name
+
+        def __enter__(self):
+            self._model = self._exp._get_model(self._model_name)
+            return self._model
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            del self._model
+
 
 class ExperimentWithCheckpoints(Experiment):
     def __init__(self, *args, **kwargs):
@@ -259,6 +277,18 @@ class ExperimentWithCheckpoints(Experiment):
         if model:
             return model
         raise ValueError("Couldn't load model {} at epoch {}".format(model_name, epoch))
+
+    class _model_at_epoch_context(Experiment._model_context):
+        def __init__(self, experiment, model_name, epoch=None):
+            Experiment._model_context.__init__(self, experiment=experiment, model_name=model_name)
+            self._epoch = epoch
+
+        def __enter__(self):
+            if not self._epoch:
+                self._model = self._exp._get_model(self._model_name)
+            else:
+                self._model = self._exp._get_model_at_epoch(self._model_name, self._epoch)
+            return self._model
 
     def _try_load_model_with_checkpoints(self, model_name):
         model = self._resource_manager.try_load_model(model_name)
