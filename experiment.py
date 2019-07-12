@@ -181,7 +181,7 @@ class Experiment(Verbose):
             source_weights = source_weights_model.layers[layer].get_weights()
             model_weights = model.layers[layer].get_weights()
             for order in norm_orders:
-                distance_list[layer].append(np.dist(model_weights - source_weights, ord=order))
+                distance_list[layer].append(np.linalg.norm(model_weights - source_weights, ord=order))x
         return distance_list
 
 
