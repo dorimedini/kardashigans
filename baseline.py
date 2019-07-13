@@ -18,6 +18,7 @@ class Baseline(ExperimentWithCheckpoints):
     train) weights, and phase2 re-initializes each layer to specific weight checkpoints
     (by epoch) when testing robustness.
     """
+
     def __init__(self,
                  root_dir='/content/drive/My Drive/globi/',
                  resource_load_dir=None,
@@ -102,15 +103,15 @@ class Baseline(ExperimentWithCheckpoints):
         test_set = self._test_sets[model_name]
         with self.open_model(model_name) as model:
             clean_results = AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
-                                                       model=model,
-                                                       batch_size=Baseline.get_dataset_batch_size(dataset_name))
+                                                         model=model,
+                                                         batch_size=Baseline.get_dataset_batch_size(dataset_name))
             try:
                 with self.open_model_at_epoch(model_name, 'start') as start_model:
                     robustness = [AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
-                                                             model=model,
-                                                             source_weights_model=start_model,
-                                                             layer_indices=[i],
-                                                             batch_size=Baseline.get_dataset_batch_size(dataset_name))
+                                                               model=model,
+                                                               source_weights_model=start_model,
+                                                               layer_indices=[i],
+                                                               batch_size=Baseline.get_dataset_batch_size(dataset_name))
                                   for i in range(len(model.layers))]
             except Exception as e:
                 self._print("Missing 'start' checkpoint in phase1, cannot continue.")
@@ -132,11 +133,11 @@ class Baseline(ExperimentWithCheckpoints):
                     "row labels are {}".format(len(data), len(data[0]), rows))
         n_layers = len(data[0]) - 1
         AnalyzeModel.generate_heatmap(data=data,
-                              row_labels=rows,
-                              col_labels=["Baseline"] + ["Layer %d" % i for i in range(n_layers)],
-                              filename="phase1_heatmap.png",
-                              output_dir=self._results_dir,
-                              verbose=self._verbose)
+                                      row_labels=rows,
+                                      col_labels=["Baseline"] + ["Layer %d" % i for i in range(n_layers)],
+                                      filename="phase1_heatmap.png",
+                                      output_dir=self._results_dir,
+                                      verbose=self._verbose)
 
     def _phase2_dataset_robustness_by_epoch(self, dataset_name, layer):
         model_name = Baseline.get_model_name(dataset_name)
@@ -152,10 +153,11 @@ class Baseline(ExperimentWithCheckpoints):
                 try:
                     with self.open_model_at_epoch(model_name, epoch) as checkpoint_model:
                         robustness += [AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
-                                                                  model=model,
-                                                                  source_weights_model=checkpoint_model,
-                                                                  layer_indices=[layer],
-                                                                  batch_size=Baseline.get_dataset_batch_size(dataset_name))]
+                                                                    model=model,
+                                                                    source_weights_model=checkpoint_model,
+                                                                    layer_indices=[layer],
+                                                                    batch_size=Baseline.get_dataset_batch_size(
+                                                                        dataset_name))]
                 except Exception as e:
                     self._print("Missing checkpoint at epoch {} in phase2, cannot continue".format(epoch))
                     self._print("Exception: {}".format(e))

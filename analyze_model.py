@@ -2,13 +2,25 @@ import numpy as np
 import collections
 import matplotlib.pylab as plt
 import seaborn as sns
-from kardashigans.experiment import Experiment
+
+from keras import backend as K
 from kardashigans.verbose import Verbose
 
 class AnalyzeModel(object):
     """
     Static class for model analysis.
     """
+
+    @staticmethod
+    def _rernd_layers(model, layers_indices):
+        session = K.get_session()
+        for idx in layers_indices:
+            layer = model.layers[idx]
+            for v in layer.__dict__:
+                v_arg = getattr(layer, v)
+                if hasattr(v_arg, 'initializer'):
+                    initializer_method = getattr(v_arg, 'initializer')
+                    initializer_method.run(session=session)
 
     @staticmethod
     def calc_robustness(test_data, model, source_weights_model=None, layer_indices=None, batch_size=32):
@@ -39,7 +51,7 @@ class AnalyzeModel(object):
                 loaded_weights = source_weights_model.layers[idx].get_weights()
                 model.layers[idx].set_weights(loaded_weights)
         else:
-            Experiment.rernd_layers(model, layer_indices)
+            AnalyzeModel._rernd_layers(model, layer_indices)
         evaluated_metrics = model.evaluate(x_test, y_test, batch_size=batch_size)
         model.set_weights(prev_weights)
         return evaluated_metrics[model.metrics_names.index('acc')]

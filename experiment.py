@@ -3,10 +3,6 @@ import os
 import pytz
 from kardashigans.resource_manager import ResourceManager
 from kardashigans.verbose import Verbose
-from keras import backend as K
-import numpy as np
-import collections
-
 
 class Experiment(Verbose):
     """ Base class for all experiments. """
@@ -104,17 +100,6 @@ class Experiment(Verbose):
     def get_dataset_name(dataset):
         name = dataset.__name__
         return name[name.rfind(".") + 1:]
-
-    @staticmethod
-    def rernd_layers(model, layers_indices):
-        session = K.get_session()
-        for idx in layers_indices:
-            layer = model.layers[idx]
-            for v in layer.__dict__:
-                v_arg = getattr(layer, v)
-                if hasattr(v_arg, 'initializer'):
-                    initializer_method = getattr(v_arg, 'initializer')
-                    initializer_method.run(session=session)
 
     def _get_model(self, model_name):
         """
