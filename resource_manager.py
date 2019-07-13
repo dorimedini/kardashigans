@@ -44,9 +44,9 @@ class ResourceManager(Verbose):
 
     def get_epoch_save_callback(self, model_name):
         filepath_template = self._model_save_dir + self._get_checkpoint_file_template(model_name)
-        return SaveModelAtEpochsCallback(filepath_template=filepath_template,
-                                         period=self.get_epoch_save_period(),
-                                         verbose=self._verbose)
+        return ResourceManager.SaveModelAtEpochsCallback(filepath_template=filepath_template,
+                                                         period=self.get_epoch_save_period(),
+                                                         verbose=self._verbose)
 
     def save_model(self, model, model_name):
         model.save(self._get_model_save_fullpath(model_name),
@@ -113,26 +113,25 @@ class ResourceManager(Verbose):
                 self._print("Saved epoch {} not found at {}".format(epoch, self._get_checkpoint_model_name(model_name, epoch)))
         return epoch_model_map
 
+    class SaveModelAtEpochsCallback(Callback):
+        def __init__(self, filepath_template, period=None, verbose=False):
+            super(SaveModelAtEpochsCallback, self).__init__()
+            self.filepath_template = filepath_template
+            self.period = period if period else []
+            self._printer = Verbose(verbose=verbose)
 
-class SaveModelAtEpochsCallback(Callback):
-    def __init__(self, filepath_template, period=None, verbose=False):
-        super(SaveModelAtEpochsCallback, self).__init__()
-        self.filepath_template = filepath_template
-        self.period = period if period else []
-        self._printer = Verbose(verbose=verbose)
-
-    def on_train_begin(self, logs=None):
-        filepath = self.filepath_template.format(epoch="start", **logs)
-        self.model.save(filepath, overwrite=True)
-        self._printer._print("saved model to {}".format(filepath))
-
-    def on_epoch_end(self, epoch, logs=None):
-        if epoch in self.period:
-            filepath = self.filepath_template.format(epoch=epoch, **logs)
+        def on_train_begin(self, logs=None):
+            filepath = self.filepath_template.format(epoch="start", **logs)
             self.model.save(filepath, overwrite=True)
             self._printer._print("saved model to {}".format(filepath))
 
-    def on_train_end(self, logs=None):
-        filepath = self.filepath_template.format(epoch="end", **logs)
-        self.model.save(filepath, overwrite=True)
-        self._printer._print("saved model to {}".format(filepath))
+        def on_epoch_end(self, epoch, logs=None):
+            if epoch in self.period:
+                filepath = self.filepath_template.format(epoch=epoch, **logs)
+                self.model.save(filepath, overwrite=True)
+                self._printer._print("saved model to {}".format(filepath))
+
+        def on_train_end(self, logs=None):
+            filepath = self.filepath_template.format(epoch="end", **logs)
+            self.model.save(filepath, overwrite=True)
+            self._printer._print("saved model to {}".format(filepath))
