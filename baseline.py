@@ -27,14 +27,22 @@ class Baseline(ExperimentWithCheckpoints):
         cifar10_name = Baseline.get_model_name(Experiment.get_dataset_name(cifar10))
         super(Baseline, self).__init__(name='Baseline',
                                        model_names=[mnist_name, cifar10_name],
-                                       verbose=verbose,
                                        trainers={
                                            mnist_name: Baseline.construct_dataset_trainer(mnist, verbose),
                                            cifar10_name: Baseline.construct_dataset_trainer(cifar10, verbose)
                                        },
                                        root_dir=root_dir,
+                                       period=Baseline.get_epoch_save_period(),
+                                       verbose=verbose,
                                        resource_load_dir=resource_load_dir)
         self._dataset_names = [Experiment.get_dataset_name(dataset) for dataset in [mnist, cifar10]]
+
+    @staticmethod
+    def get_epoch_save_period():
+        return [0, 1, 2, 3, 8, 40, 90]
+
+    def get_checkpoint_epoch_keys(self):
+        return self._resource_manager.get_checkpoint_epoch_keys(Baseline.get_epoch_save_period())
 
     @staticmethod
     def get_model_name(dataset_name):
@@ -141,7 +149,7 @@ class Baseline(ExperimentWithCheckpoints):
 
     def _phase2_dataset_robustness_by_epoch(self, dataset_name, layer):
         model_name = Baseline.get_model_name(dataset_name)
-        checkpoints = self._resource_manager.get_checkpoint_epoch_keys()
+        checkpoints = self.get_checkpoint_epoch_keys()
         test_set = self._test_sets[model_name]
         robustness = []
         with self.open_model(model_name) as model:
@@ -171,7 +179,7 @@ class Baseline(ExperimentWithCheckpoints):
         # Output a separate heatmap for each dataset.
         # Rows are layers, columns are epochs from which the weights were
         # taken.
-        epochs = self._resource_manager.get_checkpoint_epoch_keys()
+        epochs = self.get_checkpoint_epoch_keys()
         for dataset_name in self._dataset_names:
             self._print("Running phase2 on {}".format(dataset_name))
             data = []
