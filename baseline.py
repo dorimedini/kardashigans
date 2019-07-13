@@ -2,11 +2,10 @@ from datetime import datetime
 from keras import optimizers
 from keras.datasets import mnist, cifar10
 from keras.models import model_from_json
-import matplotlib.pylab as plt
 import os
 import pytz
-import seaborn as sns
 from kardashigans.experiment import Experiment, ExperimentWithCheckpoints
+from kardashigans.analyze_model import AnalyzeModel
 from kardashigans.trainer import FCTrainer
 
 
@@ -19,6 +18,7 @@ class Baseline(ExperimentWithCheckpoints):
     train) weights, and phase2 re-initializes each layer to specific weight checkpoints
     (by epoch) when testing robustness.
     """
+
     def __init__(self,
                  root_dir='/content/drive/My Drive/globi/',
                  resource_load_dir=None,
@@ -102,16 +102,16 @@ class Baseline(ExperimentWithCheckpoints):
         model_name = Baseline.get_model_name(dataset_name)
         test_set = self._test_sets[model_name]
         with self.open_model(model_name) as model:
-            clean_results = Experiment.calc_robustness(test_data=(test_set['x'], test_set['y']),
-                                                       model=model,
-                                                       batch_size=Baseline.get_dataset_batch_size(dataset_name))
+            clean_results = AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
+                                                         model=model,
+                                                         batch_size=Baseline.get_dataset_batch_size(dataset_name))
             try:
                 with self.open_model_at_epoch(model_name, 'start') as start_model:
-                    robustness = [Experiment.calc_robustness(test_data=(test_set['x'], test_set['y']),
-                                                             model=model,
-                                                             source_weights_model=start_model,
-                                                             layer_indices=[i],
-                                                             batch_size=Baseline.get_dataset_batch_size(dataset_name))
+                    robustness = [AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
+                                                               model=model,
+                                                               source_weights_model=start_model,
+                                                               layer_indices=[i],
+                                                               batch_size=Baseline.get_dataset_batch_size(dataset_name))
                                   for i in range(len(model.layers))]
             except Exception as e:
                 self._print("Missing 'start' checkpoint in phase1, cannot continue.")
@@ -132,10 +132,12 @@ class Baseline(ExperimentWithCheckpoints):
         self._print("Robustness results: got {} rows, with {} columns on the first row, "
                     "row labels are {}".format(len(data), len(data[0]), rows))
         n_layers = len(data[0]) - 1
-        self.generate_heatmap(data=data,
-                              row_labels=rows,
-                              col_labels=["Baseline"] + ["Layer %d" % i for i in range(n_layers)],
-                              filename="phase1_heatmap.png")
+        AnalyzeModel.generate_heatmap(data=data,
+                                      row_labels=rows,
+                                      col_labels=["Baseline"] + ["Layer %d" % i for i in range(n_layers)],
+                                      filename="phase1_heatmap.png",
+                                      output_dir=self._results_dir,
+                                      verbose=self._verbose)
 
     def _phase2_dataset_robustness_by_epoch(self, dataset_name, layer):
         model_name = Baseline.get_model_name(dataset_name)
@@ -143,17 +145,19 @@ class Baseline(ExperimentWithCheckpoints):
         test_set = self._test_sets[model_name]
         robustness = []
         with self.open_model(model_name) as model:
-            clean_results = Experiment.calc_robustness(test_data=(test_set['x'], test_set['y']),
-                                                       model=model,
-                                                       batch_size=Baseline.get_dataset_batch_size(dataset_name))
+            clean_results = AnalyzeModel.calc_robustness(
+                test_data=(test_set['x'], test_set['y']),
+                model=model,
+                batch_size=Baseline.get_dataset_batch_size(dataset_name))
             for epoch in checkpoints:
                 try:
                     with self.open_model_at_epoch(model_name, epoch) as checkpoint_model:
-                        robustness += [Experiment.calc_robustness(test_data=(test_set['x'], test_set['y']),
-                                                                  model=model,
-                                                                  source_weights_model=checkpoint_model,
-                                                                  layer_indices=[layer],
-                                                                  batch_size=Baseline.get_dataset_batch_size(dataset_name))]
+                        robustness += [AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
+                                                                    model=model,
+                                                                    source_weights_model=checkpoint_model,
+                                                                    layer_indices=[layer],
+                                                                    batch_size=Baseline.get_dataset_batch_size(
+                                                                        dataset_name))]
                 except Exception as e:
                     self._print("Missing checkpoint at epoch {} in phase2, cannot continue".format(epoch))
                     self._print("Exception: {}".format(e))
@@ -175,10 +179,12 @@ class Baseline(ExperimentWithCheckpoints):
             for layer in range(Baseline.get_dataset_n_parameter_layers(dataset_name)):
                 data += [self._phase2_dataset_robustness_by_epoch(dataset_name, layer)]
                 rows += ["Layer {}".format(layer)]
-            self.generate_heatmap(data=data,
-                                  row_labels=rows,
-                                  col_labels=["Baseline"] + ["Epoch {}".format(e) for e in epochs],
-                                  filename="phase2_{}_heatmap.png".format(dataset_name))
+            AnalyzeModel.generate_heatmap(data=data,
+                                          row_labels=rows,
+                                          col_labels=["Baseline"] + ["Epoch {}".format(e) for e in epochs],
+                                          filename="phase2_{}_heatmap.png".format(dataset_name),
+                                          output_dir=self._results_dir,
+                                          verbose=self._verbose)
 
     def go(self):
         self.phase1()
