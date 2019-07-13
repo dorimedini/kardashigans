@@ -95,11 +95,10 @@ class FCTrainer(Verbose):
         layers = [input_layer]
         # Now the rest of the scum:
         for i in range(self._n_layers):
-            if i == self._n_layers - 1:  # Output layer also gets special treatment
-                layer = Dense(self._n_classes, activation=self._output_activation)
-            else:
-                layer = Dense(self._n_neurons, activation=self._activation)
+            layer = Dense(self._n_neurons, activation=self._activation)
             layers += [layer]
+        output_layer = Dense(self._n_classes, activation=self._output_activation)
+        layers += [output_layer]
         self._print("Done, returning layer list of length {}".format(len(layers)))
         return layers
 
