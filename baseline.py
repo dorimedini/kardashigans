@@ -147,29 +147,28 @@ class Baseline(ExperimentWithCheckpoints):
                                       output_dir=self._results_dir,
                                       verbose=self._verbose)
 
-    def _phase2_dataset_robustness_by_epoch(self, dataset_name, layer):
+    def _phase2_dataset_robustness_by_epoch(self, model, dataset_name, layer):
         model_name = Baseline.get_model_name(dataset_name)
         checkpoints = self.get_checkpoint_epoch_keys()
         test_set = self._test_sets[model_name]
         robustness = []
-        with self.open_model(model_name) as model:
-            clean_results = AnalyzeModel.calc_robustness(
-                test_data=(test_set['x'], test_set['y']),
-                model=model,
-                batch_size=Baseline.get_dataset_batch_size(dataset_name))
-            for epoch in checkpoints:
-                try:
-                    with self.open_model_at_epoch(model_name, epoch) as checkpoint_model:
-                        robustness += [AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
-                                                                    model=model,
-                                                                    source_weights_model=checkpoint_model,
-                                                                    layer_indices=[layer],
-                                                                    batch_size=Baseline.get_dataset_batch_size(
-                                                                        dataset_name))]
-                except Exception as e:
-                    self._print("Missing checkpoint at epoch {} in phase2, cannot continue".format(epoch))
-                    self._print("Exception: {}".format(e))
-                    return [clean_results] + [0 for i in range(len(checkpoints))]
+        clean_results = AnalyzeModel.calc_robustness(
+            test_data=(test_set['x'], test_set['y']),
+            model=model,
+            batch_size=Baseline.get_dataset_batch_size(dataset_name))
+        for epoch in checkpoints:
+            try:
+                with self.open_model_at_epoch(model_name, epoch) as checkpoint_model:
+                    robustness += [AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
+                                                                model=model,
+                                                                source_weights_model=checkpoint_model,
+                                                                layer_indices=[layer],
+                                                                batch_size=Baseline.get_dataset_batch_size(
+                                                                    dataset_name))]
+            except Exception as e:
+                self._print("Missing checkpoint at epoch {} in phase2, cannot continue".format(epoch))
+                self._print("Exception: {}".format(e))
+                return [clean_results] + [0 for i in range(len(checkpoints))]
         robustness = [clean_results] + robustness
         self._print("{} robustness of layer {} by epoch: {}".format(model_name, layer, robustness))
         return robustness
@@ -184,9 +183,11 @@ class Baseline(ExperimentWithCheckpoints):
             self._print("Running phase2 on {}".format(dataset_name))
             data = []
             rows = []
-            for layer in range(Baseline.get_dataset_n_parameter_layers(dataset_name)):
-                data += [self._phase2_dataset_robustness_by_epoch(dataset_name, layer)]
-                rows += ["Layer {}".format(layer)]
+            model_name = Baseline.get_model_name(dataset_name)
+            with self.open_model(model_name) as model:
+                for layer in range(Baseline.get_dataset_n_parameter_layers(dataset_name)):
+                    data += [self._phase2_dataset_robustness_by_epoch(model, dataset_name, layer)]
+                    rows += ["Layer {}".format(layer)]
             AnalyzeModel.generate_heatmap(data=data,
                                           row_labels=rows,
                                           col_labels=["Baseline"] + ["Epoch {}".format(e) for e in epochs],
