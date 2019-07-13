@@ -187,13 +187,10 @@ class ExperimentWithCheckpoints(Experiment):
                                                                  epoch=epoch)
 
     class _model_at_epoch_context(Experiment._model_context):
-        def __init__(self, experiment, model_name, epoch=None):
+        def __init__(self, experiment, model_name, epoch):
             Experiment._model_context.__init__(self, experiment=experiment, model_name=model_name)
             self._epoch = epoch
 
         def __enter__(self):
-            if not self._epoch:
-                self._model = self._exp._get_model(self._model_name)
-            else:
-                self._model = self._exp._get_model_at_epoch(self._model_name, self._epoch)
+            self._model = self._exp._get_model_at_epoch(self._model_name, self._epoch)
             return self._model
