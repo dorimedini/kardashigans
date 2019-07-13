@@ -150,16 +150,17 @@ class Experiment(Verbose):
 
 
 class ExperimentWithCheckpoints(Experiment):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, period, **kwargs):
+        """
+        :param period: A list of epoch numbers at which callbacks should
+            be called.
+        """
         super(ExperimentWithCheckpoints, self).__init__(*args, **kwargs)
-        self._add_epoch_checkpoint_callback()
+        self._add_epoch_checkpoint_callback(period)
 
-    def get_epoch_save_period(self):
-        return self._resource_manager.get_epoch_save_period()
-
-    def _add_epoch_checkpoint_callback(self):
+    def _add_epoch_checkpoint_callback(self, period):
         for name in self._model_names:
-            cb = self._resource_manager.get_epoch_save_callback(name)
+            cb = self._resource_manager.get_epoch_save_callback(name, period)
             self._trainers[name].add_checkpoint_callback(cb)
 
     def _get_model_at_epoch(self, model_name, epoch):
