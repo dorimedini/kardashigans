@@ -47,7 +47,6 @@ class Experiment(Verbose):
         self._resource_manager = ResourceManager(model_save_dir=self._models_dir,
                                                  model_load_dir=self._resource_load_dir,
                                                  verbose=verbose)
-        self._init_test_data()
 
     def _setup_env(self):
         """
@@ -78,23 +77,11 @@ class Experiment(Verbose):
             os.mkdir(self._models_dir)
         self._print("Test dir setup complete")
 
-    def _init_test_data(self):
-        self._test_sets = {}
-        for model_name in self._model_names:
-            self._test_sets[model_name] = {}
-            x_test, y_test = self._trainers[model_name].get_test_data()
-            self._test_sets[model_name]['x'] = x_test
-            self._test_sets[model_name]['y'] = y_test
-
     def _save_model(self, model, name):
         self._resource_manager.save_model(model=model, model_name=name)
 
     def _load_model(self, model_name):
         return self._resource_manager.load_model(model_name)
-
-    def get_test_data(self, model_name):
-        test_set = self._test_sets[model_name]
-        return test_set['x'], test_set['y']
 
     @staticmethod
     def get_dataset_name(dataset):
