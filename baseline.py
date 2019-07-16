@@ -108,14 +108,14 @@ class Baseline(ExperimentWithCheckpoints):
 
     def _phase1_dataset_robustness(self, dataset_name):
         model_name = Baseline.get_model_name(dataset_name)
-        test_set = self._test_sets[model_name]
+        x_test, y_test = self._trainers[model_name].get_test_data()
         with self.open_model(model_name) as model:
-            clean_results = AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
+            clean_results = AnalyzeModel.calc_robustness(test_data=(x_test, y_test),
                                                          model=model,
                                                          batch_size=Baseline.get_dataset_batch_size(dataset_name))
             try:
                 with self.open_model_at_epoch(model_name, 'start') as start_model:
-                    robustness = [AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
+                    robustness = [AnalyzeModel.calc_robustness(test_data=(x_test, y_test),
                                                                model=model,
                                                                source_weights_model=start_model,
                                                                layer_indices=[i],
@@ -150,16 +150,16 @@ class Baseline(ExperimentWithCheckpoints):
     def _phase2_dataset_robustness_by_epoch(self, model, dataset_name, layer):
         model_name = Baseline.get_model_name(dataset_name)
         checkpoints = self.get_checkpoint_epoch_keys()
-        test_set = self._test_sets[model_name]
+        x_test, y_test = self._trainers[model_name].get_test_data()
         robustness = []
         clean_results = AnalyzeModel.calc_robustness(
-            test_data=(test_set['x'], test_set['y']),
+            test_data=(x_test, y_test),
             model=model,
             batch_size=Baseline.get_dataset_batch_size(dataset_name))
         for epoch in checkpoints:
             try:
                 with self.open_model_at_epoch(model_name, epoch) as checkpoint_model:
-                    robustness += [AnalyzeModel.calc_robustness(test_data=(test_set['x'], test_set['y']),
+                    robustness += [AnalyzeModel.calc_robustness(test_data=(x_test, y_test),
                                                                 model=model,
                                                                 source_weights_model=checkpoint_model,
                                                                 layer_indices=[layer],

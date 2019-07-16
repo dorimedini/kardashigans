@@ -48,10 +48,6 @@ class FCTrainer(Verbose):
         self._loss = loss
         self._metrics = metrics if metrics else ['accuracy']
         self._checkpoint_callbacks = []
-        # Load the data at this point to set the shape
-        (self._x_train, self._y_train), (self._x_test, self._y_test) = self._load_data_normalized()
-        self._shape = (np.prod(self._x_train.shape[1:]),)
-        self._print("Data shape: {}".format(self._shape))
 
     def _load_data_normalized(self):
         self._print("Loading and normalizing data.")
@@ -71,6 +67,7 @@ class FCTrainer(Verbose):
         self._print("After reshape:")
         self._print("x_train.shape: {}".format(x_train.shape))
         self._print("x_test.shape: {}".format(x_test.shape))
+        self._shape = (np.prod(x_train.shape[1:]),)
         return (x_train, y_train), (x_test, y_test)
 
     def _connect_layers(self, layers):
@@ -122,22 +119,23 @@ class FCTrainer(Verbose):
     # The weight_map, if defined, should map layer indexes (in the
     # range [0,n_layers+1]) to weights (as output by layer.get_weights()).
     def go(self):
+        (x_train, y_train), (x_test, y_test) = self._load_data_normalized()
         layers = self._create_layers()
         connected_layers = self._connect_layers(layers)
         # TODO: Shouldn't layers[0] be connected_layers[0]?
         model = Model(layers[0], connected_layers[-1])
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
         self._print(model.summary())
-        model.fit(self._x_train, self._y_train,
+        model.fit(x_train, y_train,
                   shuffle=True,
                   epochs=self._epochs,
                   callbacks=self._checkpoint_callbacks,
                   batch_size=self._batch_size,
-                  validation_data=(self._x_test, self._y_test))
+                  validation_data=(x_test, y_test))
         return model
 
     def get_test_data(self):
-        return self._x_test, self._y_test
+        return self._load_data_normalized()[1]  # Returns (x_test, y_test)
 
     def add_checkpoint_callback(self, callback):
         self._checkpoint_callbacks.append(callback)
