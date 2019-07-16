@@ -52,21 +52,10 @@ class FCTrainer(Verbose):
     def _load_data_normalized(self):
         self._print("Loading and normalizing data.")
         (x_train, y_train), (x_test, y_test) = self._dataset.load_data()
-        self._print("Before reshape:")
-        self._print("x_train.shape: {}".format(x_train.shape))
-        self._print("x_test.shape: {}".format(x_test.shape))
-        self._print("y_train.shape: {}".format(y_train.shape))
-        self._print("y_test.shape: {}".format(y_test.shape))
-        self._print("x_train[0][0][0] is {}".format(x_train[0][0][0]))
-        self._print("x_train.astype('float32')[0][0][0] is {}".format(x_train.astype('float32')[0][0][0]))
         x_train = x_train.astype('float32') / 255.
         x_test = x_test.astype('float32') / 255.
-        self._print("x_train[0][0][0] is now {}".format(x_train[0][0][0]))
         x_train = x_train.reshape((len(x_train), np.prod(x_train.shape[1:])))
         x_test = x_test.reshape((len(x_test), np.prod(x_test.shape[1:])))
-        self._print("After reshape:")
-        self._print("x_train.shape: {}".format(x_train.shape))
-        self._print("x_test.shape: {}".format(x_test.shape))
         self._shape = (np.prod(x_train.shape[1:]),)
         return (x_train, y_train), (x_test, y_test)
 
