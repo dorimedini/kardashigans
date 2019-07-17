@@ -67,7 +67,7 @@ class Experiment(Verbose):
             self._resource_load_dir = self._models_dir
         else:
             self._resource_load_dir = self._root_dir + self._resource_load_dir
-        self._print("In _setup_env(), setting up test dir at {}".format(self._run_dir))
+        self.logger.debug("In _setup_env(), setting up test dir at {}".format(self._run_dir))
         if not os.path.isdir(self._base_dir):
             os.mkdir(self._base_dir)
         if not os.path.isdir(self._run_dir):
@@ -76,7 +76,7 @@ class Experiment(Verbose):
             os.mkdir(self._results_dir)
         if not os.path.isdir(self._models_dir):
             os.mkdir(self._models_dir)
-        self._print("Test dir setup complete")
+        self.logger.debug("Test dir setup complete")
 
     def _init_test_data(self):
         self._test_sets = {}
@@ -112,7 +112,7 @@ class Experiment(Verbose):
             return self._load_model(model_name)
         except:
             # If the load failed, or for some reason we need to fit the model:
-            self._print("Fitting dataset {}".format(model_name))
+            self.logger.debug("Fitting dataset {}".format(model_name))
             model = self._trainers[model_name].go()
             self._resource_manager.save_model(model, model_name)
             return model
