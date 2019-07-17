@@ -5,48 +5,19 @@ from keras.models import Model
 import numpy as np
 from kardashigans.verbose import Verbose
 
-
-class FCTrainer(Verbose):
-    """ Trains a fully connected network on a dataset """
+class BaseTrainer(Verbose):
+    """
+    Base class for Trainer
+    """
     def __init__(self,
                  dataset,
-                 verbose=False,
-                 n_layers=3,
-                 n_classes=10,
-                 n_neurons=256,
-                 epochs=100,
-                 batch_size=32,
-                 activation='relu',
-                 output_activation='softmax',
-                 optimizer=optimizers.SGD(momentum=0.9, nesterov=True),
-                 loss='sparse_categorical_crossentropy',
-                 metrics=None):
+                 verbose=False):
         """
         :param dataset: keras.datasets.mnist, for example
         :param verbose: Logging on / off
-        :param n_layers: Number of layers in the FCN
-        :param n_classes: Number of output classes
-        :param n_neurons: Number of neurons per inner layer
-        :param epochs: Number of epochs to train
-        :param batch_size: Number of samples per batch
-        :param activation: Activation function of inner nodes
-        :param output_activation: Activation function of the output layer
-        :param optimizer: Optimizer used when fitting
-        :param loss: Loss used when fitting
-        :param metrics: By which to score
         """
-        super(FCTrainer, self).__init__(verbose=verbose)
+        super().__init__(verbose=verbose)
         self._dataset = dataset
-        self._n_layers = n_layers
-        self._n_classes = n_classes
-        self._n_neurons = n_neurons
-        self._epochs = epochs
-        self._batch_size = batch_size
-        self._activation = activation
-        self._output_activation = output_activation
-        self._optimizer = optimizer
-        self._loss = loss
-        self._metrics = metrics if metrics else ['accuracy']
         self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
         (self._x_train, self._y_train), (self._x_test, self._y_test) = self._load_data_normalized()
@@ -87,6 +58,66 @@ class FCTrainer(Verbose):
         self._print("Done")
         return connected_layers
 
+    def get_test_data(self):
+        return self._x_test, self._y_test
+
+    def add_checkpoint_callback(self, callback):
+        self._checkpoint_callbacks.append(callback)
+
+    def go(self):
+        raise NotImplementedError
+
+    @staticmethod
+    def freeze_layers(layers, layers_to_freeze):
+        for idx in layers_to_freeze:
+            layers[idx].trainable = False
+
+    @staticmethod
+    def set_layers_weights(layers, weight_map):
+        for idx in weight_map:
+            layers[idx].set_weights(weight_map[idx])
+
+
+class FCTrainer(BaseTrainer):
+    """ Trains a fully connected network on a dataset """
+    def __init__(self,
+                 n_layers=3,
+                 n_classes=10,
+                 n_neurons=256,
+                 epochs=100,
+                 batch_size=32,
+                 activation='relu',
+                 output_activation='softmax',
+                 optimizer=optimizers.SGD(momentum=0.9, nesterov=True),
+                 loss='sparse_categorical_crossentropy',
+                 metrics=None,
+                 **kwargs):
+        """
+        :param dataset: keras.datasets.mnist, for example
+        :param verbose: Logging on / off
+        :param n_layers: Number of layers in the FCN
+        :param n_classes: Number of output classes
+        :param n_neurons: Number of neurons per inner layer
+        :param epochs: Number of epochs to train
+        :param batch_size: Number of samples per batch
+        :param activation: Activation function of inner nodes
+        :param output_activation: Activation function of the output layer
+        :param optimizer: Optimizer used when fitting
+        :param loss: Loss used when fitting
+        :param metrics: By which to score
+        """
+        super().__init__(**kwargs)
+        self._n_layers = n_layers
+        self._n_classes = n_classes
+        self._n_neurons = n_neurons
+        self._epochs = epochs
+        self._batch_size = batch_size
+        self._activation = activation
+        self._output_activation = output_activation
+        self._optimizer = optimizer
+        self._loss = loss
+        self._metrics = metrics if metrics else ['accuracy']
+
     def _create_layers(self):
         self._print("Creating {} layers".format(self._n_layers))
         # Input layer gets special treatment:
@@ -103,14 +134,14 @@ class FCTrainer(Verbose):
         return layers
 
     # Given a dataset, constructs a model with the requested parameters
-    # and runs it after freezing layers. Also, optionally uses specified
+    # and runs it. Also, optionally uses specified
     # weights.
     #
     # The dataset object should have a load_data() method (named in
     # keras.datasets).
     #
     # The shape parameter should be (28**2,) for mnist and (32**2,)
-    # for cifur10.
+    # for cifar10.
     #
     # Including input and output layers, we'll have a total of n_layers+2
     # layers in the resulting topology.
@@ -135,12 +166,6 @@ class FCTrainer(Verbose):
                   batch_size=self._batch_size,
                   validation_data=(self._x_test, self._y_test))
         return model
-
-    def get_test_data(self):
-        return self._x_test, self._y_test
-
-    def add_checkpoint_callback(self, callback):
-        self._checkpoint_callbacks.append(callback)
 
 
 class FCFreezeTrainer(FCTrainer):
