@@ -12,13 +12,11 @@ class BaseTrainer(Verbose):
     Base class for Trainer
     """
     def __init__(self,
-                 dataset,
-                 verbose=False):
+                 dataset):
         """
         :param dataset: keras.datasets.mnist, for example
-        :param verbose: Logging on / off
         """
-        super().__init__(verbose=verbose)
+        super(BaseTrainer, self).__init__()
         self._dataset = dataset
         self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
@@ -96,7 +94,6 @@ class FCTrainer(BaseTrainer):
                  **kwargs):
         """
         :param dataset: keras.datasets.mnist, for example
-        :param verbose: Logging on / off
         :param n_layers: Number of layers in the FCN
         :param n_classes: Number of output classes
         :param n_neurons: Number of neurons per inner layer

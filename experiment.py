@@ -11,8 +11,7 @@ class Experiment(Verbose):
                  model_names,
                  trainers,
                  root_dir,
-                 resource_load_dir=None,
-                 verbose=False):
+                 resource_load_dir=None):
         """
         Each experiment should have it's own unique name (it will get
         a folder named after it).
@@ -35,9 +34,8 @@ class Experiment(Verbose):
         :param resource_load_dir: If provided, is the path to a directory from which
             models should be loaded, relative to the root directory. Provided as an
             argument to the ResourceManager.
-        :param verbose: Logging on / off.
         """
-        super(Experiment, self).__init__(name=name, verbose=verbose)
+        super(Experiment, self).__init__(name=name)
         self._name = name
         self._model_names = model_names
         self._trainers = trainers
@@ -45,8 +43,7 @@ class Experiment(Verbose):
         self._resource_load_dir = resource_load_dir  # Gets default value if None
         self._setup_env()
         self._resource_manager = ResourceManager(model_save_dir=self._models_dir,
-                                                 model_load_dir=self._resource_load_dir,
-                                                 verbose=verbose)
+                                                 model_load_dir=self._resource_load_dir)
         self._init_test_data()
 
     def _setup_env(self):

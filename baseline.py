@@ -21,19 +21,17 @@ class Baseline(ExperimentWithCheckpoints):
 
     def __init__(self,
                  root_dir='/content/drive/My Drive/globi/',
-                 resource_load_dir=None,
-                 verbose=False):
+                 resource_load_dir=None):
         mnist_name = Baseline.get_model_name(Experiment.get_dataset_name(mnist))
         cifar10_name = Baseline.get_model_name(Experiment.get_dataset_name(cifar10))
         super(Baseline, self).__init__(name='Baseline',
                                        model_names=[mnist_name, cifar10_name],
                                        trainers={
-                                           mnist_name: Baseline.construct_dataset_trainer(mnist, verbose),
-                                           cifar10_name: Baseline.construct_dataset_trainer(cifar10, verbose)
+                                           mnist_name: Baseline.construct_dataset_trainer(mnist),
+                                           cifar10_name: Baseline.construct_dataset_trainer(cifar10)
                                        },
                                        root_dir=root_dir,
                                        period=Baseline.get_epoch_save_period(),
-                                       verbose=verbose,
                                        resource_load_dir=resource_load_dir)
         self._dataset_names = [Experiment.get_dataset_name(dataset) for dataset in [mnist, cifar10]]
 
@@ -97,10 +95,9 @@ class Baseline(ExperimentWithCheckpoints):
             return 128
 
     @staticmethod
-    def construct_dataset_trainer(dataset, verbose=False):
+    def construct_dataset_trainer(dataset):
         dataset_name = Experiment.get_dataset_name(dataset)
         return FCTrainer(dataset=dataset,
-                         verbose=verbose,
                          epochs=Baseline.get_dataset_n_epochs(dataset_name),
                          n_layers=Baseline.get_dataset_n_layers(dataset_name),
                          batch_size=Baseline.get_dataset_batch_size(dataset_name),
@@ -144,8 +141,7 @@ class Baseline(ExperimentWithCheckpoints):
                                       row_labels=rows,
                                       col_labels=["Baseline"] + ["Layer %d" % i for i in range(n_layers)],
                                       filename="phase1_heatmap.png",
-                                      output_dir=self._results_dir,
-                                      verbose=self._verbose)
+                                      output_dir=self._results_dir)
 
     def _phase2_dataset_robustness_by_epoch(self, model, dataset_name, layer):
         model_name = Baseline.get_model_name(dataset_name)
@@ -192,8 +188,7 @@ class Baseline(ExperimentWithCheckpoints):
                                           row_labels=rows,
                                           col_labels=["Baseline"] + ["Epoch {}".format(e) for e in epochs],
                                           filename="phase2_{}_heatmap.png".format(dataset_name),
-                                          output_dir=self._results_dir,
-                                          verbose=self._verbose)
+                                          output_dir=self._results_dir)
 
     def go(self):
         self.phase1()
