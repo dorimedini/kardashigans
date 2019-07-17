@@ -5,7 +5,7 @@ from keras.callbacks import Callback
 
 class ResourceManager(Verbose):
     """ Handles saving / loading trained models """
-    def __init__(self, model_save_dir, model_load_dir, verbose=False):
+    def __init__(self, model_save_dir, model_load_dir):
         """
         :param model_save_dir: All saved models will be stored at this
             directory, under a subdirectory named by the date / time of
@@ -14,7 +14,7 @@ class ResourceManager(Verbose):
             directory. Loaded models must be directly contained in this
             path.
         """
-        super(ResourceManager, self).__init__(verbose=verbose)
+        super(ResourceManager, self).__init__()
         self._model_save_dir = self._add_slash(model_save_dir)
         self._model_load_dir = self._add_slash(model_load_dir)
         self._model_file_template = "{model_name}.h5"
@@ -42,8 +42,7 @@ class ResourceManager(Verbose):
     def get_epoch_save_callback(self, model_name, period):
         filepath_template = self._model_save_dir + self._get_checkpoint_file_template(model_name)
         return ResourceManager.SaveModelAtEpochsCallback(filepath_template=filepath_template,
-                                                         period=period,
-                                                         verbose=self._verbose)
+                                                         period=period)
 
     def save_model(self, model, model_name):
         model.save(self._get_model_save_fullpath(model_name),
@@ -113,11 +112,11 @@ class ResourceManager(Verbose):
         return epoch_model_map
 
     class SaveModelAtEpochsCallback(Callback):
-        def __init__(self, filepath_template, period=None, verbose=False):
+        def __init__(self, filepath_template, period=None):
             super(ResourceManager.SaveModelAtEpochsCallback, self).__init__()
             self.filepath_template = filepath_template
             self.period = period if period else []
-            self.v = Verbose(name=self.__class__.__name__, verbose=verbose)
+            self.v = Verbose(name=self.__class__.__name__)
 
         def on_train_begin(self, logs=None):
             filepath = self.filepath_template.format(epoch="start", **logs)

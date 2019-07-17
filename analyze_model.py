@@ -75,7 +75,7 @@ class AnalyzeModel(object):
         return distance_list
 
     @staticmethod
-    def generate_heatmap(data, row_labels, col_labels, filename, output_dir, verbose=True):
+    def generate_heatmap(data, row_labels, col_labels, filename, output_dir):
         """
         Creates a heatmap image from the data, outputs to file.
 
@@ -92,5 +92,4 @@ class AnalyzeModel(object):
         ax = sns.heatmap(data, linewidth=0.5, xticklabels=col_labels, yticklabels=row_labels)
         fig = ax.get_figure()
         fig.savefig(output_dir + filename)
-        if verbose:
-            plt.show()
+        plt.show()
