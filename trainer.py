@@ -4,6 +4,8 @@ from keras.layers import Input, Dense
 from keras.models import Model
 import numpy as np
 from kardashigans.verbose import Verbose
+from keras.callbacks import Callback
+
 
 class BaseTrainer(Verbose):
     """
@@ -205,3 +207,24 @@ class FCFreezeTrainer(FCTrainer):
                   validation_data=(self._x_test, self._y_test))
         return model
 
+
+class SaveWeightslAtEpochsCallback(Callback):
+    def __init__(self, epoch_to_weights: dict, period=None, verbose=False):
+        super().__init__()
+        self.epoch_to_weights = epoch_to_weights
+        self.period = period if period else []
+
+    @staticmethod
+    def get_weights(model):
+        return [layer.get_weights() for layer in model.layers]
+
+    def on_train_begin(self, logs=None):
+        self.epoch_to_weights["start"] = self.get_weights(self.model)
+
+    def on_epoch_end(self, epoch, logs=None):
+        if epoch in self.period:
+            self.epoch_to_weights['epoch_{}'.format(epoch)] =\
+                self.get_weights(self.model)
+
+    def on_train_end(self, logs=None):
+        self.epoch_to_weights["end"] = self.get_weights(self.model)
