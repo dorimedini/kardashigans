@@ -37,7 +37,7 @@ class Experiment(Verbose):
             argument to the ResourceManager.
         :param verbose: Logging on / off.
         """
-        super(Experiment, self).__init__(verbose=verbose)
+        super(Experiment, self).__init__(name=name, verbose=verbose)
         self._name = name
         self._model_names = model_names
         self._trainers = trainers

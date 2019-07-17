@@ -1,20 +1,19 @@
-from datetime import datetime
-from inspect import getframeinfo, stack
-import os
-import pytz
+import logging
 
 
 class Verbose(object):
     """ Inherit this class to call self._print and get line number etc."""
-    def __init__(self, verbose=False):
+    def __init__(self, name=None, verbose=False):
         self._verbose = verbose
+        self._name = name if name else self.__class__.__name__
+        self._init_logging()
+
+    def _init_logging(self):
+        self.logger = logging.getLogger(self._name)
+        level = logging.DEBUG if self._verbose else logging.WARNING
+        self.logger.setLevel(level=level)
 
     def _print(self, *args, **kwargs):
         if self._verbose is False:
             return
-        caller = getframeinfo(stack()[1][0])
-        print("{time} {file}:{line} - {s}".format(time=datetime.now(pytz.timezone('Israel')).strftime("%d-%m-%Y %H:%M:%S"),
-                                                  file=os.path.basename(caller.filename),
-                                                  line=caller.lineno,
-                                                  s=args[0]), *args[1:], **kwargs)
-
+        self.logger.debug(args[0], *args[1:], **kwargs)
