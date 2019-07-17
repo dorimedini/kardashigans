@@ -183,28 +183,25 @@ class FCFreezeTrainer(FCTrainer):
             values to use (instead of random init). Intended for use
             with frozen layers.
         """
-        super(FCFreezeTrainer, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self._layers_to_freeze = layers_to_freeze if layers_to_freeze else []
         self._weight_map = weight_map if weight_map else {}
 
-    def _create_layers(self):
-        self._print("Creating {} layers, freezing {}".format(self._n_layers, len(self._layers_to_freeze)))
-        # Input layer gets special treatment:
-        self._print("Input layer initialized with shape={}".format(self._shape))
-        input_layer = Input(shape=self._shape)
-        if 0 in self._weight_map:
-            input_layer.set_weights(self._weight_map[0])
-        layers = [input_layer]
-        # Now the rest of the scum:
-        for i in range(self._n_layers):
-            if i == self._n_layers - 1:  # Output layer also gets special treatment
-                layer = Dense(self._n_classes, activation=self._output_activation)
-            else:
-                layer = Dense(self._n_neurons, activation=self._activation)
-            if i in self._layers_to_freeze:
-                layer.trainable = False
-            if i in self._weight_map:
-                layer.set_weights(self._weight_map[i])
-            layers += [layer]
-        self._print("Done, returning layer list of length {}".format(len(layers)))
-        return layers
+    def go(self):
+        layers = self._create_layers()
+        self.freeze_layers(layers, self._layers_to_freeze)
+        self._print("Freezing layers {}".format(self._layers_to_freeze))
+        self.set_layers_weights(layers, self._weight_map)
+        connected_layers = self._connect_layers(layers)
+        # TODO: Shouldn't layers[0] be connected_layers[0]?
+        model = Model(layers[0], connected_layers[-1])
+        model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
+        self._print(model.summary())
+        model.fit(self._x_train, self._y_train,
+                  shuffle=True,
+                  epochs=self._epochs,
+                  callbacks=self._checkpoint_callbacks,
+                  batch_size=self._batch_size,
+                  validation_data=(self._x_test, self._y_test))
+        return model
+
