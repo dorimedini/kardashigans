@@ -85,10 +85,10 @@ class AnalyzeModel(object):
         :param filename: Output filename, relative to the experiment results
             directory.
         """
-        printer = Verbose(verbose)
-        printer._print("Generating heatmap. Data: {}".format(data))
-        printer._print("Rows: {}".format(row_labels))
-        printer._print("Cols: {}".format(col_labels))
+        v = Verbose(name="AnalyzeModel.generate_heatmap")
+        v.logger.debug("Generating heatmap. Data: {}".format(data))
+        v.logger.debug("Rows: {}".format(row_labels))
+        v.logger.debug("Cols: {}".format(col_labels))
         ax = sns.heatmap(data, linewidth=0.5, xticklabels=col_labels, yticklabels=row_labels)
         fig = ax.get_figure()
         fig.savefig(output_dir + filename)

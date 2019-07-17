@@ -12,8 +12,3 @@ class Verbose(object):
         self.logger = logging.getLogger(self._name)
         level = logging.DEBUG if self._verbose else logging.WARNING
         self.logger.setLevel(level=level)
-
-    def _print(self, *args, **kwargs):
-        if self._verbose is False:
-            return
-        self.logger.debug(args[0], *args[1:], **kwargs)

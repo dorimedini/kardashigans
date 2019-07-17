@@ -122,11 +122,11 @@ class Baseline(ExperimentWithCheckpoints):
                                                                batch_size=Baseline.get_dataset_batch_size(dataset_name))
                                   for i in range(len(model.layers))]
             except Exception as e:
-                self._print("Missing 'start' checkpoint in phase1, cannot continue.")
-                self._print("Exception: {}".format(e))
+                self.logger.error("Missing 'start' checkpoint in phase1, cannot continue.")
+                self.logger.error("Exception: {}".format(e))
                 return [clean_results] + [0 for i in range(len(model.layers))]
         robustness = [clean_results] + robustness
-        self._print("{} robustness: by layer: {}".format(model_name, robustness))
+        self.logger.debug("{} robustness: by layer: {}".format(model_name, robustness))
         return robustness
 
     # Phase 1: Train, pick a layer(s), re-init to random and evaluate
@@ -137,8 +137,8 @@ class Baseline(ExperimentWithCheckpoints):
         for dataset_name in self._dataset_names:
             data += [self._phase1_dataset_robustness(dataset_name)]
             rows += [Baseline.get_model_name(dataset_name)]
-        self._print("Robustness results: got {} rows, with {} columns on the first row, "
-                    "row labels are {}".format(len(data), len(data[0]), rows))
+        self.logger.debug("Robustness results: got {} rows, with {} columns on the first row, "
+                          "row labels are {}".format(len(data), len(data[0]), rows))
         n_layers = len(data[0]) - 1
         AnalyzeModel.generate_heatmap(data=data,
                                       row_labels=rows,
@@ -166,11 +166,11 @@ class Baseline(ExperimentWithCheckpoints):
                                                                 batch_size=Baseline.get_dataset_batch_size(
                                                                     dataset_name))]
             except Exception as e:
-                self._print("Missing checkpoint at epoch {} in phase2, cannot continue".format(epoch))
-                self._print("Exception: {}".format(e))
+                self.logger.error("Missing checkpoint at epoch {} in phase2, cannot continue".format(epoch))
+                self.logger.error("Exception: {}".format(e))
                 return [clean_results] + [0 for i in range(len(checkpoints))]
         robustness = [clean_results] + robustness
-        self._print("{} robustness of layer {} by epoch: {}".format(model_name, layer, robustness))
+        self.logger.debug("{} robustness of layer {} by epoch: {}".format(model_name, layer, robustness))
         return robustness
 
     # Phase 2: Train, pick a layer, re-init to specific epochs, evaluate
@@ -180,7 +180,7 @@ class Baseline(ExperimentWithCheckpoints):
         # taken.
         epochs = self.get_checkpoint_epoch_keys()
         for dataset_name in self._dataset_names:
-            self._print("Running phase2 on {}".format(dataset_name))
+            self.logger.debug("Running phase2 on {}".format(dataset_name))
             data = []
             rows = []
             model_name = Baseline.get_model_name(dataset_name)

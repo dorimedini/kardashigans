@@ -62,12 +62,14 @@ class ResourceManager(Verbose):
         try:
             return self.load_model(model_name)
         except:
-            self._print("Couldn't load model from {}. Attempting to load from saved model directory (maybe newly"
-                        " trained)".format(self._get_model_load_fullpath(model_name)))
+            self.logger.warning("Couldn't load model from {}. Attempting to load from saved model "
+                                "directory (maybe newly trained)"
+                                "".format(self._get_model_load_fullpath(model_name)))
             try:
                 return self.load_model(model_name, fullpath=self._get_model_save_fullpath(model_name))
             except:
-                self._print("Couldn't even load model from {}".format(self._get_model_save_fullpath(model_name)))
+                self.logger.warning("Couldn't even load model from {}"
+                                    "".format(self._get_model_save_fullpath(model_name)))
         return None
 
     def try_load_model_at_epoch(self, model_name, epoch):
@@ -97,17 +99,17 @@ class ResourceManager(Verbose):
         if start_model:
             epoch_model_map['start'] = start_model
         else:
-            self._print("No start epoch found (tried {})".format(start_model))
+            self.logger.warning("No start epoch found (tried {})".format(start_model))
         if end_model:
             epoch_model_map['end'] = end_model
         else:
-            self._print("No end epoch found (tried {})".format(end_model))
+            self.logger.warning("No end epoch found (tried {})".format(end_model))
         for epoch in period:
             epoch_model = self.try_load_model_at_epoch(model_name, epoch)
             if epoch_model:
                 epoch_model_map[epoch] = epoch_model
             else:
-                self._print("Saved epoch {} not found at {}".format(epoch, self._get_checkpoint_model_name(model_name, epoch)))
+                self.logger.warning("Saved epoch {} not found at {}".format(epoch, self._get_checkpoint_model_name(model_name, epoch)))
         return epoch_model_map
 
     class SaveModelAtEpochsCallback(Callback):
@@ -115,20 +117,20 @@ class ResourceManager(Verbose):
             super(ResourceManager.SaveModelAtEpochsCallback, self).__init__()
             self.filepath_template = filepath_template
             self.period = period if period else []
-            self._printer = Verbose(verbose=verbose)
+            self.v = Verbose(name=self.__class__.__name__, verbose=verbose)
 
         def on_train_begin(self, logs=None):
             filepath = self.filepath_template.format(epoch="start", **logs)
             self.model.save(filepath, overwrite=True)
-            self._printer._print("saved model to {}".format(filepath))
+            self.v.logger.debug("saved model to {}".format(filepath))
 
         def on_epoch_end(self, epoch, logs=None):
             if epoch in self.period:
                 filepath = self.filepath_template.format(epoch=epoch, **logs)
                 self.model.save(filepath, overwrite=True)
-                self._printer._print("saved model to {}".format(filepath))
+                self.v.logger.debug("saved model to {}".format(filepath))
 
         def on_train_end(self, logs=None):
             filepath = self.filepath_template.format(epoch="end", **logs)
             self.model.save(filepath, overwrite=True)
-            self._printer._print("saved model to {}".format(filepath))
+            self.v.logger.debug("saved model to {}".format(filepath))
