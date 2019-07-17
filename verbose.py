@@ -10,9 +10,11 @@ class Verbose(object):
         self._verbose = verbose
 
     def _print(self, *args, **kwargs):
+        if self._verbose is False:
+            return
         caller = getframeinfo(stack()[1][0])
-        if self._verbose:
-            print("{time} {file}:{line} - {s}".format(time=datetime.now(pytz.timezone('Israel')).strftime("%d-%m-%Y %H:%M:%S"),
-                                                      file=os.path.basename(caller.filename),
-                                                      line=caller.lineno,
-                                                      s=args[0]), *args[1:], **kwargs)
+        print("{time} {file}:{line} - {s}".format(time=datetime.now(pytz.timezone('Israel')).strftime("%d-%m-%Y %H:%M:%S"),
+                                                  file=os.path.basename(caller.filename),
+                                                  line=caller.lineno,
+                                                  s=args[0]), *args[1:], **kwargs)
+
