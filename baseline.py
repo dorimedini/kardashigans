@@ -185,7 +185,7 @@ class Baseline(ExperimentWithCheckpoints):
             rows = []
             model_name = Baseline.get_model_name(dataset_name)
             with self.open_model(model_name) as model:
-                for layer in range(Baseline.get_dataset_n_parameter_layers(dataset_name)):
+                for layer in range(len(model.layers)):
                     data += [self._phase2_dataset_robustness_by_epoch(model, dataset_name, layer)]
                     rows += ["Layer {}".format(layer)]
             AnalyzeModel.generate_heatmap(data=data,
