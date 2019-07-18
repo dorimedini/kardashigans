@@ -3,9 +3,12 @@ import os
 import pytz
 from kardashigans.resource_manager import ResourceManager
 from kardashigans.verbose import Verbose
+from kardashigans.analyze_model import AnalyzeModel
+
 
 class Experiment(Verbose):
     """ Base class for all experiments. """
+
     def __init__(self,
                  name,
                  model_names,
@@ -178,6 +181,9 @@ class ExperimentWithCheckpoints(Experiment):
             return model
         raise ValueError("Couldn't load model {} at epoch {}".format(model_name, epoch))
 
+    def get_checkpoint_epoch_keys(self, checkpoint_epochs: list):
+        return self._resource_manager.get_checkpoint_epoch_keys(checkpoint_epochs)
+
     def open_model_at_epoch(self, model_name, epoch):
         return ExperimentWithCheckpoints._model_at_epoch_context(experiment=self,
                                                                  model_name=model_name,
@@ -191,3 +197,53 @@ class ExperimentWithCheckpoints(Experiment):
         def __enter__(self):
             self._model = self._exp._get_model_at_epoch(self._model_name, self._epoch)
             return self._model
+
+    def get_full_robustness_results(self, model_name: str, checkpoint_epochs: list, layer_indices_list: list,
+                                    batch_size=32, relative_accuracy=False):
+        """
+        calculates robustness results for all requested layer_indices for all epochs.
+
+        :param model_name: model_name to load model and test_data
+        :param checkpoint_epochs: the epochs that have checkpoint saved models
+        :param layer_indices_list: a 2d list of layer indices to calculate robustness for.
+        :param batch_size: batch_size for evaluation
+        :param relative_accuracy: should the robustness result be absolute accuracy of model or relative to clean model
+        :return: 2d dictionary with acc values per layer indices per epoch
+        """
+
+        def return_acc(acc: float, clean_acc: float, relative=False):
+            return acc / clean_acc if relative else acc
+
+        test_data = self.get_test_data(model_name)
+        model = self._get_model(model_name)
+        checkpoint_epochs = self.get_checkpoint_epoch_keys(checkpoint_epochs)
+        results = {str(layer_indices): {} for layer_indices in layer_indices_list}
+        # clean
+        clean_eval = AnalyzeModel.calc_robustness(
+            test_data=test_data,
+            model=model,
+            batch_size=batch_size)
+        # rernd
+        for layer_indices in layer_indices_list:
+            curr_result = AnalyzeModel.calc_robustness(test_data=test_data,
+                                                       model=model,
+                                                       layer_indices=layer_indices,
+                                                       batch_size=batch_size)
+            results[str(layer_indices)]["rernd"] = return_acc(curr_result, clean_eval, relative_accuracy)
+        # checkpoints
+        for epoch in checkpoint_epochs:
+            with self.open_model_at_epoch(model_name, epoch) as checkpoint_model:
+                try:
+                    for layer_indices in layer_indices_list:
+                        curr_result = AnalyzeModel.calc_robustness(test_data=test_data,
+                                                                   model=model,
+                                                                   source_weights_model=checkpoint_model,
+                                                                   layer_indices=layer_indices,
+                                                                   batch_size=batch_size)
+                        results[str(layer_indices)][str(epoch)] = return_acc(curr_result,
+                                                                             clean_eval, relative_accuracy)
+                except ValueError as e:
+                    self._print("Missing checkpoint at epoch {}, cannot continue".format(epoch))
+                    self._print("Exception: {}".format(e))
+                    raise e
+        return results, clean_eval
