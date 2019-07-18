@@ -12,11 +12,21 @@ class BaseTrainer(Verbose):
     Base class for Trainer
     """
     def __init__(self,
-                 dataset):
+                 dataset,
+                 n_layers,
+                 batch_size,
+                 epochs,
+                 **kwargs):
         """
         :param dataset: keras.datasets.mnist, for example
+        :param n_layers: Number of layers in the network
+        :param batch_size: Number of samples per batch
+        :param epochs: Number of epochs to train
         """
         super(BaseTrainer, self).__init__()
+        self._n_layers = n_layers
+        self._batch_size = batch_size
+        self._epochs = epochs
         self._dataset = dataset
         self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
@@ -57,6 +67,15 @@ class BaseTrainer(Verbose):
             connected_layers += [current_layer(last_connected)]
         self.logger.debug("Done")
         return connected_layers
+
+    def get_n_layers(self):
+        return self._n_layers
+
+    def get_batch_size(self):
+        return self._batch_size
+
+    def get_epochs(self):
+        return self._epochs
 
     def get_test_data(self):
         return self._x_test, self._y_test
@@ -106,12 +125,13 @@ class FCTrainer(BaseTrainer):
         :param loss: Loss used when fitting
         :param metrics: By which to score
         """
-        super().__init__(dataset=dataset, **kwargs)
-        self._n_layers = n_layers
+        super().__init__(dataset=dataset,
+                         n_layers=n_layers,
+                         batch_size=batch_size,
+                         epochs=epochs,
+                         **kwargs)
         self._n_classes = n_classes
         self._n_neurons = n_neurons
-        self._epochs = epochs
-        self._batch_size = batch_size
         self._activation = activation
         self._output_activation = output_activation
         self._optimizer = optimizer
