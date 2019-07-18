@@ -101,6 +101,9 @@ class Experiment(Verbose):
         name = dataset.__name__
         return name[name.rfind(".") + 1:]
 
+    def get_trainer_map(self):
+        return self._trainers
+
     def _get_model(self, model_name):
         """
         Used by the context manager. Tries to load the model, if it doesn't
