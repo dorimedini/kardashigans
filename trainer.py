@@ -12,44 +12,42 @@ class BaseTrainer(Verbose):
     Base class for Trainer
     """
     def __init__(self,
-                 dataset,
-                 verbose=False):
+                 dataset):
         """
         :param dataset: keras.datasets.mnist, for example
-        :param verbose: Logging on / off
         """
-        super().__init__(verbose=verbose)
+        super(BaseTrainer, self).__init__()
         self._dataset = dataset
         self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
         (self._x_train, self._y_train), (self._x_test, self._y_test) = self._load_data_normalized()
         self._shape = (np.prod(self._x_train.shape[1:]),)
-        self._print("Data shape: {}".format(self._shape))
+        self.logger.debug("Data shape: {}".format(self._shape))
 
     def _load_data_normalized(self):
-        self._print("Loading and normalizing data.")
+        self.logger.debug("Loading and normalizing data.")
         (x_train, y_train), (x_test, y_test) = self._dataset.load_data()
-        self._print("Before reshape:")
-        self._print("x_train.shape: {}".format(x_train.shape))
-        self._print("x_test.shape: {}".format(x_test.shape))
-        self._print("y_train.shape: {}".format(y_train.shape))
-        self._print("y_test.shape: {}".format(y_test.shape))
-        self._print("x_train[0][0][0] is {}".format(x_train[0][0][0]))
-        self._print("x_train.astype('float32')[0][0][0] is {}".format(x_train.astype('float32')[0][0][0]))
+        self.logger.info("Before reshape:")
+        self.logger.info("x_train.shape: {}".format(x_train.shape))
+        self.logger.info("x_test.shape: {}".format(x_test.shape))
+        self.logger.info("y_train.shape: {}".format(y_train.shape))
+        self.logger.info("y_test.shape: {}".format(y_test.shape))
+        self.logger.info("x_train[0][0][0] is {}".format(x_train[0][0][0]))
+        self.logger.info("x_train.astype('float32')[0][0][0] is {}".format(x_train.astype('float32')[0][0][0]))
         x_train = x_train.astype('float32') / 255.
         x_test = x_test.astype('float32') / 255.
-        self._print("x_train[0][0][0] is now {}".format(x_train[0][0][0]))
+        self.logger.info("x_train[0][0][0] is now {}".format(x_train[0][0][0]))
         x_train = x_train.reshape((len(x_train), np.prod(x_train.shape[1:])))
         x_test = x_test.reshape((len(x_test), np.prod(x_test.shape[1:])))
-        self._print("After reshape:")
-        self._print("x_train.shape: {}".format(x_train.shape))
-        self._print("x_test.shape: {}".format(x_test.shape))
+        self.logger.info("After reshape:")
+        self.logger.info("x_train.shape: {}".format(x_train.shape))
+        self.logger.info("x_test.shape: {}".format(x_test.shape))
         return (x_train, y_train), (x_test, y_test)
 
     def _connect_layers(self, layers):
         # Connect first layer to input, then connect each subsequent
         # layer to the previous connected layer.
-        self._print("Connecting {} layers...".format(len(layers)))
+        self.logger.debug("Connecting {} layers...".format(len(layers)))
         input_layer = layers[0]
         next_layer = layers[1]  # Could be output
         connected_layers = [next_layer(input_layer)]
@@ -57,7 +55,7 @@ class BaseTrainer(Verbose):
             current_layer = layers[i]
             last_connected = connected_layers[-1]
             connected_layers += [current_layer(last_connected)]
-        self._print("Done")
+        self.logger.debug("Done")
         return connected_layers
 
     def get_test_data(self):
@@ -96,7 +94,6 @@ class FCTrainer(BaseTrainer):
                  **kwargs):
         """
         :param dataset: keras.datasets.mnist, for example
-        :param verbose: Logging on / off
         :param n_layers: Number of layers in the FCN
         :param n_classes: Number of output classes
         :param n_neurons: Number of neurons per inner layer
@@ -121,9 +118,9 @@ class FCTrainer(BaseTrainer):
         self._metrics = metrics if metrics else ['accuracy']
 
     def _create_layers(self):
-        self._print("Creating {} layers".format(self._n_layers))
+        self.logger.debug("Creating {} layers".format(self._n_layers))
         # Input layer gets special treatment:
-        self._print("Input layer initialized with shape={}".format(self._shape))
+        self.logger.debug("Input layer initialized with shape={}".format(self._shape))
         input_layer = Input(shape=self._shape)
         layers = [input_layer]
         # Now the rest of the scum:
@@ -132,7 +129,7 @@ class FCTrainer(BaseTrainer):
             layers += [layer]
         output_layer = Dense(self._n_classes, activation=self._output_activation)
         layers += [output_layer]
-        self._print("Done, returning layer list of length {}".format(len(layers)))
+        self.logger.debug("Done, returning layer list of length {}".format(len(layers)))
         return layers
 
     # Given a dataset, constructs a model with the requested parameters
@@ -160,7 +157,7 @@ class FCTrainer(BaseTrainer):
         # TODO: Shouldn't layers[0] be connected_layers[0]?
         model = Model(layers[0], connected_layers[-1])
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
-        self._print(model.summary())
+        self.logger.info(model.summary())
         model.fit(self._x_train, self._y_train,
                   shuffle=True,
                   epochs=self._epochs,
@@ -192,13 +189,13 @@ class FCFreezeTrainer(FCTrainer):
     def go(self):
         layers = self._create_layers()
         self.freeze_layers(layers, self._layers_to_freeze)
-        self._print("Freezing layers {}".format(self._layers_to_freeze))
+        self.logger.debug("Freezing layers {}".format(self._layers_to_freeze))
         self.set_layers_weights(layers, self._weight_map)
         connected_layers = self._connect_layers(layers)
         # TODO: Shouldn't layers[0] be connected_layers[0]?
         model = Model(layers[0], connected_layers[-1])
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
-        self._print(model.summary())
+        self.logger.info(model.summary())
         model.fit(self._x_train, self._y_train,
                   shuffle=True,
                   epochs=self._epochs,

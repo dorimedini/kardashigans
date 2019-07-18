@@ -5,7 +5,7 @@ from keras.callbacks import Callback
 
 class ResourceManager(Verbose):
     """ Handles saving / loading trained models """
-    def __init__(self, model_save_dir, model_load_dir, verbose=False):
+    def __init__(self, model_save_dir, model_load_dir):
         """
         :param model_save_dir: All saved models will be stored at this
             directory, under a subdirectory named by the date / time of
@@ -14,7 +14,7 @@ class ResourceManager(Verbose):
             directory. Loaded models must be directly contained in this
             path.
         """
-        super(ResourceManager, self).__init__(verbose=verbose)
+        super(ResourceManager, self).__init__()
         self._model_save_dir = self._add_slash(model_save_dir)
         self._model_load_dir = self._add_slash(model_load_dir)
         self._model_file_template = "{model_name}.h5"
@@ -42,8 +42,7 @@ class ResourceManager(Verbose):
     def get_epoch_save_callback(self, model_name, period):
         filepath_template = self._model_save_dir + self._get_checkpoint_file_template(model_name)
         return ResourceManager.SaveModelAtEpochsCallback(filepath_template=filepath_template,
-                                                         period=period,
-                                                         verbose=self._verbose)
+                                                         period=period)
 
     def save_model(self, model, model_name):
         model.save(self._get_model_save_fullpath(model_name),
@@ -62,12 +61,14 @@ class ResourceManager(Verbose):
         try:
             return self.load_model(model_name)
         except:
-            self._print("Couldn't load model from {}. Attempting to load from saved model directory (maybe newly"
-                        " trained)".format(self._get_model_load_fullpath(model_name)))
+            self.logger.warning("Couldn't load model from {}. Attempting to load from saved model "
+                                "directory (maybe newly trained)"
+                                "".format(self._get_model_load_fullpath(model_name)))
             try:
                 return self.load_model(model_name, fullpath=self._get_model_save_fullpath(model_name))
             except:
-                self._print("Couldn't even load model from {}".format(self._get_model_save_fullpath(model_name)))
+                self.logger.warning("Couldn't even load model from {}"
+                                    "".format(self._get_model_save_fullpath(model_name)))
         return None
 
     def try_load_model_at_epoch(self, model_name, epoch):
@@ -97,38 +98,38 @@ class ResourceManager(Verbose):
         if start_model:
             epoch_model_map['start'] = start_model
         else:
-            self._print("No start epoch found (tried {})".format(start_model))
+            self.logger.warning("No start epoch found (tried {})".format(start_model))
         if end_model:
             epoch_model_map['end'] = end_model
         else:
-            self._print("No end epoch found (tried {})".format(end_model))
+            self.logger.warning("No end epoch found (tried {})".format(end_model))
         for epoch in period:
             epoch_model = self.try_load_model_at_epoch(model_name, epoch)
             if epoch_model:
                 epoch_model_map[epoch] = epoch_model
             else:
-                self._print("Saved epoch {} not found at {}".format(epoch, self._get_checkpoint_model_name(model_name, epoch)))
+                self.logger.warning("Saved epoch {} not found at {}".format(epoch, self._get_checkpoint_model_name(model_name, epoch)))
         return epoch_model_map
 
     class SaveModelAtEpochsCallback(Callback):
-        def __init__(self, filepath_template, period=None, verbose=False):
+        def __init__(self, filepath_template, period=None):
             super(ResourceManager.SaveModelAtEpochsCallback, self).__init__()
             self.filepath_template = filepath_template
             self.period = period if period else []
-            self._printer = Verbose(verbose=verbose)
+            self.v = Verbose(name=self.__class__.__name__)
 
         def on_train_begin(self, logs=None):
             filepath = self.filepath_template.format(epoch="start", **logs)
             self.model.save(filepath, overwrite=True)
-            self._printer._print("saved model to {}".format(filepath))
+            self.v.logger.debug("saved model to {}".format(filepath))
 
         def on_epoch_end(self, epoch, logs=None):
             if epoch in self.period:
                 filepath = self.filepath_template.format(epoch=epoch, **logs)
                 self.model.save(filepath, overwrite=True)
-                self._printer._print("saved model to {}".format(filepath))
+                self.v.logger.debug("saved model to {}".format(filepath))
 
         def on_train_end(self, logs=None):
             filepath = self.filepath_template.format(epoch="end", **logs)
             self.model.save(filepath, overwrite=True)
-            self._printer._print("saved model to {}".format(filepath))
+            self.v.logger.debug("saved model to {}".format(filepath))

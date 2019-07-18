@@ -11,8 +11,7 @@ class Experiment(Verbose):
                  model_names,
                  trainers,
                  root_dir,
-                 resource_load_dir=None,
-                 verbose=False):
+                 resource_load_dir=None):
         """
         Each experiment should have it's own unique name (it will get
         a folder named after it).
@@ -35,9 +34,8 @@ class Experiment(Verbose):
         :param resource_load_dir: If provided, is the path to a directory from which
             models should be loaded, relative to the root directory. Provided as an
             argument to the ResourceManager.
-        :param verbose: Logging on / off.
         """
-        super(Experiment, self).__init__(verbose=verbose)
+        super(Experiment, self).__init__(name=name)
         self._name = name
         self._model_names = model_names
         self._trainers = trainers
@@ -45,8 +43,7 @@ class Experiment(Verbose):
         self._resource_load_dir = resource_load_dir  # Gets default value if None
         self._setup_env()
         self._resource_manager = ResourceManager(model_save_dir=self._models_dir,
-                                                 model_load_dir=self._resource_load_dir,
-                                                 verbose=verbose)
+                                                 model_load_dir=self._resource_load_dir)
         self._init_test_data()
 
     def _setup_env(self):
@@ -67,7 +64,7 @@ class Experiment(Verbose):
             self._resource_load_dir = self._models_dir
         else:
             self._resource_load_dir = self._root_dir + self._resource_load_dir
-        self._print("In _setup_env(), setting up test dir at {}".format(self._run_dir))
+        self.logger.debug("In _setup_env(), setting up test dir at {}".format(self._run_dir))
         if not os.path.isdir(self._base_dir):
             os.mkdir(self._base_dir)
         if not os.path.isdir(self._run_dir):
@@ -76,7 +73,7 @@ class Experiment(Verbose):
             os.mkdir(self._results_dir)
         if not os.path.isdir(self._models_dir):
             os.mkdir(self._models_dir)
-        self._print("Test dir setup complete")
+        self.logger.debug("Test dir setup complete")
 
     def _init_test_data(self):
         self._test_sets = {}
@@ -112,7 +109,7 @@ class Experiment(Verbose):
             return self._load_model(model_name)
         except:
             # If the load failed, or for some reason we need to fit the model:
-            self._print("Fitting dataset {}".format(model_name))
+            self.logger.debug("Fitting dataset {}".format(model_name))
             model = self._trainers[model_name].go()
             self._resource_manager.save_model(model, model_name)
             return model
