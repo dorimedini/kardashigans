@@ -81,6 +81,7 @@ class BaseTrainer(Verbose):
 class FCTrainer(BaseTrainer):
     """ Trains a fully connected network on a dataset """
     def __init__(self,
+                 dataset,
                  n_layers=3,
                  n_classes=10,
                  n_neurons=256,
@@ -105,7 +106,7 @@ class FCTrainer(BaseTrainer):
         :param loss: Loss used when fitting
         :param metrics: By which to score
         """
-        super().__init__(**kwargs)
+        super().__init__(dataset=dataset, **kwargs)
         self._n_layers = n_layers
         self._n_classes = n_classes
         self._n_neurons = n_neurons
