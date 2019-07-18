@@ -99,3 +99,14 @@ class AnalyzeModel(object):
         fig = ax.get_figure()
         fig.savefig(output_dir + filename)
         plt.show()
+
+    @staticmethod
+    def generate_heatmap_from_results(self, heatmap_name: str, results: dict, save_results_path: str, verbose=False):
+        data = [value.values() for value in results.values()]
+        row_labels = results.keys()
+        col_labels = results["start"].keys()
+        AnalyzeModel.generate_heatmap(data=data,
+                                      row_labels=["Layers {}".format(layers) for layers in row_labels],
+                                      col_labels=["Epoch {}".format(e) for e in col_labels],
+                                      filename="{}_heatmap.png".format(heatmap_name),
+                                      output_dir=save_results_path)
