@@ -7,6 +7,7 @@ import pytz
 from kardashigans.experiment import Experiment, ExperimentWithCheckpoints
 from kardashigans.analyze_model import AnalyzeModel
 from kardashigans.trainer import FCTrainer
+from kardashigans.resource_manager import ResourceManager
 
 
 class Baseline(ExperimentWithCheckpoints):
@@ -40,7 +41,7 @@ class Baseline(ExperimentWithCheckpoints):
         return [0, 1, 2, 3, 8, 40, 90]
 
     def get_checkpoint_epoch_keys(self):
-        return self._resource_manager.get_checkpoint_epoch_keys(Baseline.get_epoch_save_period())
+        return ResourceManager.get_checkpoint_epoch_keys(Baseline.get_epoch_save_period())
 
     @staticmethod
     def get_model_name(dataset_name):

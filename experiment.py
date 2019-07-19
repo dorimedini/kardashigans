@@ -184,9 +184,6 @@ class ExperimentWithCheckpoints(Experiment):
             return model
         raise ValueError("Couldn't load model {} at epoch {}".format(model_name, epoch))
 
-    def get_checkpoint_epoch_keys(self, checkpoint_epochs: list):
-        return self._resource_manager.get_checkpoint_epoch_keys(checkpoint_epochs)
-
     def open_model_at_epoch(self, model_name, epoch):
         return ExperimentWithCheckpoints._model_at_epoch_context(experiment=self,
                                                                  model_name=model_name,
@@ -218,7 +215,7 @@ class ExperimentWithCheckpoints(Experiment):
             return acc / clean_acc if relative else acc
 
         test_data = self.get_test_data(model_name)
-        checkpoint_epochs = self.get_checkpoint_epoch_keys(checkpoint_epochs)
+        checkpoint_epochs = ResourceManager.get_checkpoint_epoch_keys(checkpoint_epochs)
         results = {str(layer_indices): {} for layer_indices in layer_indices_list}
         # clean
         with self.open_model(model_name) as model:
