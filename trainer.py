@@ -71,6 +71,14 @@ class BaseTrainer(Verbose):
     def get_n_layers(self):
         return self._n_layers
 
+    def get_n_parameter_layers(self):
+        """
+        The number of actual parameter layers constructed.
+        This depends on n_layers but is not equal and may depend on
+        topology, see implementation in FC network
+        """
+        raise NotImplementedError
+
     def get_batch_size(self):
         return self._batch_size
 
@@ -152,6 +160,9 @@ class FCTrainer(BaseTrainer):
         layers += [output_layer]
         self.logger.debug("Done, returning layer list of length {}".format(len(layers)))
         return layers
+
+    def get_n_parameter_layers(self):
+        return self.get_n_layers() + 2
 
     # Given a dataset, constructs a model with the requested parameters
     # and runs it. Also, optionally uses specified
