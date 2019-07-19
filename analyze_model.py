@@ -102,7 +102,7 @@ class AnalyzeModel(object):
 
     @staticmethod
     def generate_heatmap_from_results(heatmap_name: str, results: dict, save_results_path: str, verbose=False):
-        data = [value.values() for value in results.values()]
+        data = [list(value.values()) for value in results.values()]
         row_labels = list(results.keys())
         col_labels = list(results[row_labels[0]].keys())
         AnalyzeModel.generate_heatmap(data=data,
