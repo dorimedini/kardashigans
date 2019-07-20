@@ -65,7 +65,10 @@ class ResourceManager(Verbose):
                                 "directory (maybe newly trained)"
                                 "".format(self._get_model_load_fullpath(model_name)))
             try:
-                return self.load_model(model_name, fullpath=self._get_model_save_fullpath(model_name))
+                model = self.load_model(model_name, fullpath=self._get_model_save_fullpath(model_name))
+                self.logger.debug("Failed to load from load dir, but successfully loaded model {} "
+                                  "from {}".format(model_name, self._get_model_save_fullpath(model_name)))
+                return model
             except:
                 self.logger.warning("Couldn't even load model from {}"
                                     "".format(self._get_model_save_fullpath(model_name)))
