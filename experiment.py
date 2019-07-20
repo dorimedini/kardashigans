@@ -115,6 +115,7 @@ class Experiment(Verbose):
             return self._load_model(model_name)
         except:
             # If the load failed, or for some reason we need to fit the model:
+            self.logger.warning("Failed to load model {} from disk".format(model_name))
             self.logger.debug("Fitting dataset {}".format(model_name))
             model = self._trainers[model_name].go()
             self._resource_manager.save_model(model, model_name)
