@@ -3,9 +3,12 @@ import os
 import pytz
 from kardashigans.resource_manager import ResourceManager
 from kardashigans.verbose import Verbose
+from kardashigans.analyze_model import AnalyzeModel
+
 
 class Experiment(Verbose):
     """ Base class for all experiments. """
+
     def __init__(self,
                  name,
                  model_names,
@@ -98,6 +101,9 @@ class Experiment(Verbose):
         name = dataset.__name__
         return name[name.rfind(".") + 1:]
 
+    def get_trainer_map(self):
+        return self._trainers
+
     def _get_model(self, model_name):
         """
         Used by the context manager. Tries to load the model, if it doesn't
@@ -109,6 +115,7 @@ class Experiment(Verbose):
             return self._load_model(model_name)
         except:
             # If the load failed, or for some reason we need to fit the model:
+            self.logger.warning("Failed to load model {} from disk".format(model_name))
             self.logger.debug("Fitting dataset {}".format(model_name))
             model = self._trainers[model_name].go()
             self._resource_manager.save_model(model, model_name)
@@ -191,3 +198,53 @@ class ExperimentWithCheckpoints(Experiment):
         def __enter__(self):
             self._model = self._exp._get_model_at_epoch(self._model_name, self._epoch)
             return self._model
+
+    def get_full_robustness_results(self, model_name: str, checkpoint_epochs: list, layer_indices_list: list,
+                                    batch_size=32, relative_accuracy=False):
+        """
+        calculates robustness results for all requested layer_indices for all epochs.
+
+        :param model_name: model_name to load model and test_data
+        :param checkpoint_epochs: the epochs that have checkpoint saved models
+        :param layer_indices_list: a 2d list of layer indices to calculate robustness for.
+        :param batch_size: batch_size for evaluation
+        :param relative_accuracy: should the robustness result be absolute accuracy of model or relative to clean model
+        :return: 2d dictionary with acc values per layer indices per epoch
+        """
+
+        def return_acc(acc: float, clean_acc: float, relative=False):
+            return acc / clean_acc if relative else acc
+
+        test_data = self.get_test_data(model_name)
+        checkpoint_epochs = ResourceManager.get_checkpoint_epoch_keys(checkpoint_epochs)
+        results = {str(layer_indices): {} for layer_indices in layer_indices_list}
+        # clean
+        with self.open_model(model_name) as model:
+            clean_eval = AnalyzeModel.calc_robustness(
+                test_data=test_data,
+                model=model,
+                batch_size=batch_size)
+            # rernd
+            for layer_indices in layer_indices_list:
+                curr_result = AnalyzeModel.calc_robustness(test_data=test_data,
+                                                           model=model,
+                                                           layer_indices=layer_indices,
+                                                           batch_size=batch_size)
+                results[str(layer_indices)]["rernd"] = return_acc(curr_result, clean_eval, relative_accuracy)
+            # checkpoints
+            for epoch in checkpoint_epochs:
+                with self.open_model_at_epoch(model_name, epoch) as checkpoint_model:
+                    try:
+                        for layer_indices in layer_indices_list:
+                            curr_result = AnalyzeModel.calc_robustness(test_data=test_data,
+                                                                       model=model,
+                                                                       source_weights_model=checkpoint_model,
+                                                                       layer_indices=layer_indices,
+                                                                       batch_size=batch_size)
+                            results[str(layer_indices)][str(epoch)] = return_acc(curr_result,
+                                                                                 clean_eval, relative_accuracy)
+                    except ValueError as e:
+                        self.logger.error("Missing checkpoint at epoch {}, cannot continue".format(epoch))
+                        self.logger.error("Exception: {}".format(e))
+                        raise e
+        return results, clean_eval
