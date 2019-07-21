@@ -36,7 +36,8 @@ class ResourceManager(Verbose):
     def _get_checkpoint_file_template(self, model_name):
         return model_name + "_epoch_{epoch}.h5"
 
-    def get_checkpoint_epoch_keys(self, period):
+    @staticmethod
+    def get_checkpoint_epoch_keys(period):
         return ['start'] + period + ['end']
 
     def get_epoch_save_callback(self, model_name, period):

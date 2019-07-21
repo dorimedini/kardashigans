@@ -101,6 +101,9 @@ class Experiment(Verbose):
         name = dataset.__name__
         return name[name.rfind(".") + 1:]
 
+    def get_trainer_map(self):
+        return self._trainers
+
     def _get_model(self, model_name):
         """
         Used by the context manager. Tries to load the model, if it doesn't
@@ -112,6 +115,7 @@ class Experiment(Verbose):
             return self._load_model(model_name)
         except:
             # If the load failed, or for some reason we need to fit the model:
+            self.logger.warning("Failed to load model {} from disk".format(model_name))
             self.logger.debug("Fitting dataset {}".format(model_name))
             model = self._trainers[model_name].go()
             self._resource_manager.save_model(model, model_name)
@@ -181,9 +185,6 @@ class ExperimentWithCheckpoints(Experiment):
             return model
         raise ValueError("Couldn't load model {} at epoch {}".format(model_name, epoch))
 
-    def get_checkpoint_epoch_keys(self, checkpoint_epochs: list):
-        return self._resource_manager.get_checkpoint_epoch_keys(checkpoint_epochs)
-
     def open_model_at_epoch(self, model_name, epoch):
         return ExperimentWithCheckpoints._model_at_epoch_context(experiment=self,
                                                                  model_name=model_name,
@@ -215,7 +216,7 @@ class ExperimentWithCheckpoints(Experiment):
             return acc / clean_acc if relative else acc
 
         test_data = self.get_test_data(model_name)
-        checkpoint_epochs = self.get_checkpoint_epoch_keys(checkpoint_epochs)
+        checkpoint_epochs = ResourceManager.get_checkpoint_epoch_keys(checkpoint_epochs)
         results = {str(layer_indices): {} for layer_indices in layer_indices_list}
         # clean
         with self.open_model(model_name) as model:

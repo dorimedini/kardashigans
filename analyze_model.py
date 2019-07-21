@@ -102,9 +102,9 @@ class AnalyzeModel(object):
 
     @staticmethod
     def generate_heatmap_from_results(heatmap_name: str, results: dict, save_results_path: str, verbose=False):
-        data = [value.values() for value in results.values()]
-        row_labels = results.keys()
-        col_labels = results["start"].keys()
+        data = [list(value.values()) for value in results.values()]
+        row_labels = list(results.keys())
+        col_labels = list(results[row_labels[0]].keys())
         AnalyzeModel.generate_heatmap(data=data,
                                       row_labels=["Layers {}".format(layers) for layers in row_labels],
                                       col_labels=["Epoch {}".format(e) for e in col_labels],
