@@ -5,18 +5,18 @@ from keras.callbacks import Callback
 
 class ResourceManager(Verbose):
     """ Handles saving / loading trained models """
-    def __init__(self, model_save_dir, model_load_dir):
+    def __init__(self, save_dir, load_dir):
         """
-        :param model_save_dir: All saved models will be stored at this
-            directory, under a subdirectory named by the date / time of
-            initialization of the resource manager.
-        :param model_load_dir: All loaded models are loaded from this
-            directory. Loaded models must be directly contained in this
-            path.
+        :param save_dir: All saved files will be stored at this directory,
+            under a subdirectory named by the date / time of initialization
+            of the resource manager.
+        :param load_dir: All loaded files are loaded from this directory.
+            Loaded files (models / evaluation data etc.) must be directly
+            contained in this directory.
         """
         super(ResourceManager, self).__init__()
-        self._model_save_dir = self._add_slash(model_save_dir)
-        self._model_load_dir = self._add_slash(model_load_dir)
+        self._save_dir = self._add_slash(save_dir)
+        self._load_dir = self._add_slash(load_dir)
         self._model_file_template = "{model_name}.h5"
 
     def _add_slash(self, path_to_dir):
@@ -25,10 +25,10 @@ class ResourceManager(Verbose):
         return path_to_dir
 
     def _get_model_save_fullpath(self, model_name):
-        return self._model_save_dir + self._model_file_template.format(model_name=model_name)
+        return self._save_dir + self._model_file_template.format(model_name=model_name)
 
     def _get_model_load_fullpath(self, model_name):
-        return self._model_load_dir + self._model_file_template.format(model_name=model_name)
+        return self._load_dir + self._model_file_template.format(model_name=model_name)
 
     def _get_checkpoint_model_name(self, model_name, epoch):
         return model_name + "_epoch_{}".format(epoch)
@@ -41,7 +41,7 @@ class ResourceManager(Verbose):
         return ['start'] + period + ['end']
 
     def get_epoch_save_callback(self, model_name, period):
-        filepath_template = self._model_save_dir + self._get_checkpoint_file_template(model_name)
+        filepath_template = self._save_dir + self._get_checkpoint_file_template(model_name)
         return ResourceManager.SaveModelAtEpochsCallback(filepath_template=filepath_template,
                                                          period=period)
 

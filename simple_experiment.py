@@ -59,4 +59,4 @@ class SimpleExperiment(ExperimentWithCheckpoints):
                                                               batch_size=self._batch_size)
             AnalyzeModel.generate_heatmap_from_results(heatmap_name=model_name,
                                                        results=results,
-                                                       save_results_path=self._results_dir)
+                                                       save_results_path=self._output_dir)

@@ -45,8 +45,8 @@ class Experiment(Verbose):
         self._root_dir = root_dir
         self._resource_load_dir = resource_load_dir  # Gets default value if None
         self._setup_env()
-        self._resource_manager = ResourceManager(model_save_dir=self._models_dir,
-                                                 model_load_dir=self._resource_load_dir)
+        self._resource_manager = ResourceManager(save_dir=self._output_dir,
+                                                 load_dir=self._resource_load_dir)
         self._init_test_data()
 
     def _setup_env(self):
@@ -60,22 +60,16 @@ class Experiment(Verbose):
         """
         self._base_dir = self._root_dir + self._name + "/"
         self._time_started = datetime.now(pytz.timezone('Israel')).strftime("%d_%m_%Y___%H_%M_%S")
-        self._run_dir = self._base_dir + self._time_started + "/"
-        self._results_dir = self._run_dir + "RESULTS/"
-        self._models_dir = self._run_dir + "MODELS/"
+        self._output_dir = self._base_dir + self._time_started + "/"
         if not self._resource_load_dir:
-            self._resource_load_dir = self._models_dir
+            self._resource_load_dir = self._output_dir
         else:
             self._resource_load_dir = self._root_dir + self._resource_load_dir
-        self.logger.debug("In _setup_env(), setting up test dir at {}".format(self._run_dir))
+        self.logger.debug("In _setup_env(), setting up test dir at {}".format(self._output_dir))
         if not os.path.isdir(self._base_dir):
             os.mkdir(self._base_dir)
-        if not os.path.isdir(self._run_dir):
-            os.mkdir(self._run_dir)
-        if not os.path.isdir(self._results_dir):
-            os.mkdir(self._results_dir)
-        if not os.path.isdir(self._models_dir):
-            os.mkdir(self._models_dir)
+        if not os.path.isdir(self._output_dir):
+            os.mkdir(self._output_dir)
         self.logger.debug("Test dir setup complete")
 
     def _init_test_data(self):
