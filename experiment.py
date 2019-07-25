@@ -80,6 +80,12 @@ class Experiment(Verbose):
             self._test_sets[model_name]['x'] = x_test
             self._test_sets[model_name]['y'] = y_test
 
+    def _save_results(self, results, model_name, results_name):
+        self._resource_manager.save_results(results, model_name, results_name)
+
+    def _load_results(self, model_name, results_name):
+        return self._resource_manager.load_results(model_name, results_name)
+
     def _save_model(self, model, name):
         self._resource_manager.save_model(model=model, model_name=name)
 
