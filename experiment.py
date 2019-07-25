@@ -200,15 +200,18 @@ class ExperimentWithCheckpoints(Experiment):
             return self._model
 
     def get_full_robustness_results(self, model_name: str, checkpoint_epochs: list, layer_indices_list: list,
-                                    batch_size=32, relative_accuracy=False):
+                                    batch_size=32, relative_accuracy=False, save=True):
         """
-        calculates robustness results for all requested layer_indices for all epochs.
+        Calculates robustness results for all requested layer_indices for all epochs.
+
+        By default, saves evaluation results to disk.
 
         :param model_name: model_name to load model and test_data
         :param checkpoint_epochs: the epochs that have checkpoint saved models
         :param layer_indices_list: a 2d list of layer indices to calculate robustness for.
         :param batch_size: batch_size for evaluation
         :param relative_accuracy: should the robustness result be absolute accuracy of model or relative to clean model
+        :param save: If False, results aren't dumped to disk
         :return: 2d dictionary with acc values per layer indices per epoch
         """
 
@@ -247,4 +250,7 @@ class ExperimentWithCheckpoints(Experiment):
                         self.logger.error("Missing checkpoint at epoch {}, cannot continue".format(epoch))
                         self.logger.error("Exception: {}".format(e))
                         raise e
+        if save:
+            self._save_results(results, model_name, 'robustness_dirty')
+            self._save_results(clean_eval, model_name, 'robustness_clean')
         return results, clean_eval
