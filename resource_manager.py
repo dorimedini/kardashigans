@@ -1,3 +1,4 @@
+import json
 import keras
 from kardashigans.verbose import Verbose
 from keras.callbacks import Callback
@@ -44,6 +45,34 @@ class ResourceManager(Verbose):
         filepath_template = self._save_dir + self._get_checkpoint_file_template(model_name)
         return ResourceManager.SaveModelAtEpochsCallback(filepath_template=filepath_template,
                                                          period=period)
+
+    def _get_results_save_fullpath(self, model_name, results_name):
+        return "{}{}_{}.json".format(self._save_dir, model_name, results_name)
+
+    def _get_results_load_fullpath(self, model_name, results_name):
+        return "{}{}_{}.json".format(self._load_dir, model_name, results_name)
+
+    def save_results(self, results, model_name, results_name):
+        """
+        Saves results object to JSON file.
+
+        File name will be derived by model name and the name of the
+        specific result. To prevent accidental overwrite of different
+        results for the same model, the results name parameter has no
+        default value.
+
+        :param results: A JSONable object to output
+        :param model_name: The model name of the model analyzed
+        :param results_name: Unique (up to model name) name of results
+            object
+        """
+        with open(self._get_results_save_fullpath(model_name, results_name), 'w') as file:
+            file.write(json.dumps(results))
+
+    def load_results(self, model_name, results_name):
+        """ save_results^{-1} """
+        with open(self._get_results_load_fullpath(model_name, results_name), 'r') as file:
+            return json.loads(file.read())
 
     def save_model(self, model, model_name):
         model.save(self._get_model_save_fullpath(model_name),
