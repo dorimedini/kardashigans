@@ -154,12 +154,16 @@ class Experiment(Verbose):
 
 
 class ExperimentWithCheckpoints(Experiment):
-    def __init__(self, *args, period, **kwargs):
+    def __init__(self, *args, period, use_prev_results=True, **kwargs):
         """
         :param period: A list of epoch numbers at which callbacks should
             be called.
+        :param use_prev_results: If True, before evaluating a model the experiment
+            will first attempt to load the results dictionary from the filesystem.
+            Any key in the loaded object will be skipped in get_full_robustness_results.
         """
         super(ExperimentWithCheckpoints, self).__init__(*args, **kwargs)
+        self._use_prev_results = use_prev_results
         self._add_epoch_checkpoint_callback(period)
 
     def _add_epoch_checkpoint_callback(self, period):
@@ -220,15 +224,29 @@ class ExperimentWithCheckpoints(Experiment):
 
         test_data = self.get_test_data(model_name)
         checkpoint_epochs = ResourceManager.get_checkpoint_epoch_keys(checkpoint_epochs)
+        clean_results_name = 'robustness_clean'
+        dirty_results_name = 'robustness_dirty'
+        prev_results = {}
+        if self._use_prev_results:
+            prev_results = self._resource_manager.get_existing_results(model_name, dirty_results_name)
         results = {str(layer_indices): {} for layer_indices in layer_indices_list}
         # clean
         with self.open_model(model_name) as model:
-            clean_eval = AnalyzeModel.calc_robustness(
-                test_data=test_data,
-                model=model,
-                batch_size=batch_size)
+            clean_eval = None
+            if self._use_prev_results:
+                prev_clean = self._resource_manager.get_existing_results(model_name, clean_results_name)
+                if prev_clean != {}:
+                    clean_eval = prev_clean
+            if not clean_eval:
+                clean_eval = AnalyzeModel.calc_robustness(
+                    test_data=test_data,
+                    model=model,
+                    batch_size=batch_size)
             # rernd
             for layer_indices in layer_indices_list:
+                if self._use_prev_results and str(layer_indices) in prev_results:
+                    results[str(layer_indices)]["rernd"] = prev_results[str(layer_indices)]["rernd"]
+                    continue
                 curr_result = AnalyzeModel.calc_robustness(test_data=test_data,
                                                            model=model,
                                                            layer_indices=layer_indices,
@@ -239,6 +257,9 @@ class ExperimentWithCheckpoints(Experiment):
                 with self.open_model_at_epoch(model_name, epoch) as checkpoint_model:
                     try:
                         for layer_indices in layer_indices_list:
+                            if self._use_prev_results and str(layer_indices) in prev_results:
+                                results[str(layer_indices)][str(epoch)] = prev_results[str(layer_indices)][str(epoch)]
+                                continue
                             curr_result = AnalyzeModel.calc_robustness(test_data=test_data,
                                                                        model=model,
                                                                        source_weights_model=checkpoint_model,
@@ -251,6 +272,6 @@ class ExperimentWithCheckpoints(Experiment):
                         self.logger.error("Exception: {}".format(e))
                         raise e
         if save:
-            self._save_results(results, model_name, 'robustness_dirty')
-            self._save_results(clean_eval, model_name, 'robustness_clean')
+            self._save_results(results, model_name, dirty_results_name)
+            self._save_results(clean_eval, model_name, clean_results_name)
         return results, clean_eval
