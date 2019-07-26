@@ -74,6 +74,30 @@ class ResourceManager(Verbose):
         with open(self._get_results_load_fullpath(model_name, results_name), 'r') as file:
             return json.loads(file.read())
 
+    def get_existing_results(self, model_name, results_name):
+        """
+        Basically a soft wrapper for the load_results method
+        """
+        try:
+            return self.load_results(model_name, results_name)
+        except Exception as e:
+            self.logger.warning("No previous results found, dumping new results. "
+                                "Model/results names: {}/{}".format(model_name, results_name))
+            self.logger.warning("Exception raised: {}".format(e))
+        return {}
+
+    def update_results(self, results, model_name, results_name):
+        """
+        Merges input results with previous results (if they exist) and
+        outputs merged dict to disk (overwriting previous results).
+
+        If conflicting result keys exist nothing is promised! Use with
+        care
+        """
+        prev_results = self.get_existing_results(model_name, results_name)
+        merged_results = {**results, **prev_results}
+        self.save_results(merged_results, model_name, results_name)
+
     def save_model(self, model, model_name):
         model.save(self._get_model_save_fullpath(model_name),
                    overwrite=True)
