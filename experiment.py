@@ -226,17 +226,30 @@ class ExperimentWithCheckpoints(Experiment):
         clean_results_name = 'robustness_clean'
         dirty_results_name = 'robustness_dirty'
         prev_results = {}
+        prev_clean = {}
         if self._use_prev_results:
             prev_results = self._resource_manager.get_existing_results(model_name, dirty_results_name)
+            prev_clean = self._resource_manager.get_existing_results(model_name, clean_results_name)
+            # Start by checking if there's anything to do.
+            # If all requested results exist we should just return them.
+            no_new_layer_sets = set([str(layers) for layers in layer_indices_list]).issubset(set(prev_results.keys()))
+            no_new_epochs = set([str(e) for e in checkpoint_epochs]).issubset(set(list(prev_results.values())[0].keys()))
+            self.logger.debug("Previous results {} all layer sets in {}"
+                              "".format("contain" if no_new_layer_sets else "doesn't have",
+                                        [str(layers) for layers in layer_indices_list]))
+            self.logger.debug("Previous results {} all checkpoints in {}"
+                              "".format("contain" if no_new_epochs else "doesn't have",
+                                        [str(epoch) for epoch in checkpoint_epochs]))
+            if no_new_layer_sets and no_new_epochs:
+                self.logger.debug("Nothing new to compute, returning previous results")
+                return prev_results, prev_clean
+        # Not all results are on disk (or we want to re-evaluate them)
         results = {str(layer_indices): {} for layer_indices in layer_indices_list}
         # clean
         with self.open_model(model_name) as model:
-            clean_eval = None
-            if self._use_prev_results:
-                prev_clean = self._resource_manager.get_existing_results(model_name, clean_results_name)
-                if prev_clean != {}:
-                    clean_eval = prev_clean
-            if not clean_eval:
+            if self._use_prev_results and prev_clean != {}:
+                clean_eval = prev_clean
+            else:
                 clean_eval = AnalyzeModel.calc_robustness(
                     test_data=test_data,
                     model=model,
