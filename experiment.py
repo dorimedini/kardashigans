@@ -245,6 +245,8 @@ class ExperimentWithCheckpoints(Experiment):
             # rernd
             for layer_indices in layer_indices_list:
                 if self._use_prev_results and str(layer_indices) in prev_results:
+                    self.logger.debug("Using previously computed clean results for layer list {}"
+                                      "".format(str(layer_indices)))
                     results[str(layer_indices)]["rernd"] = prev_results[str(layer_indices)]["rernd"]
                     continue
                 curr_result = AnalyzeModel.calc_robustness(test_data=test_data,
@@ -258,6 +260,8 @@ class ExperimentWithCheckpoints(Experiment):
                     try:
                         for layer_indices in layer_indices_list:
                             if self._use_prev_results and str(layer_indices) in prev_results:
+                                self.logger.debug("Using previously computed epoch {} results for layer list {}"
+                                                  "".format(str(epoch), str(layer_indices)))
                                 results[str(layer_indices)][str(epoch)] = prev_results[str(layer_indices)][str(epoch)]
                                 continue
                             curr_result = AnalyzeModel.calc_robustness(test_data=test_data,
