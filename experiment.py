@@ -86,6 +86,9 @@ class Experiment(Verbose):
     def _load_results(self, model_name, results_name):
         return self._resource_manager.load_results(model_name, results_name)
 
+    def _update_results(self, results, model_name, results_name):
+        self._resource_manager.update_results(results, model_name, results_name)
+
     def _save_model(self, model, name):
         self._resource_manager.save_model(model=model, model_name=name)
 
@@ -288,6 +291,6 @@ class ExperimentWithCheckpoints(Experiment):
                         self.logger.error("Exception: {}".format(e))
                         raise e
         if save:
-            self._save_results(results, model_name, dirty_results_name)
-            self._save_results(clean_eval, model_name, clean_results_name)
+            self._update_results(results, model_name, dirty_results_name)
+            self._update_results(clean_eval, model_name, clean_results_name)
         return results, clean_eval
