@@ -223,7 +223,6 @@ class ExperimentWithCheckpoints(Experiment):
             return acc / clean_acc if relative else acc
 
         test_data = self.get_test_data(model_name)
-        checkpoint_epochs = ResourceManager.get_checkpoint_epoch_keys(checkpoint_epochs)
         clean_results_name = 'robustness_clean'
         dirty_results_name = 'robustness_dirty'
         prev_results = {}
