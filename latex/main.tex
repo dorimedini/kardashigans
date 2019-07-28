@@ -1,0 +1,66 @@
+
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2019} with \usepackage[nohyperref]{icml2019} above.
+\usepackage{hyperref}
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage{icml2019}
+
+% If accepted, instead use the following line for the camera-ready submission:
+%\usepackage[accepted]{icml2019}
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Submission and Formatting Instructions for ICML 2019}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Let It Go: On the Robustness of Training with Frozen Layers}
+
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Aeiau Zzzz}{equal,to}
+\icmlauthor{Bauiu C.~Yyyy}{equal,to,goo}
+\icmlauthor{Cieua Vvvvv}{goo}
+\icmlauthor{Iaesut Saoeu}{ed}
+\icmlauthor{Fiuea Rrrr}{to}
+\icmlauthor{Tateu H.~Yasehe}{ed,to,goo}
+\icmlauthor{Aaoeu Iasoh}{goo}
+\icmlauthor{Buiui Eueu}{ed}
+\icmlauthor{Aeuia Zzzz}{ed}
+\icmlauthor{Bieea C.~Yyyy}{to,goo}
+\icmlauthor{Teoau Xxxx}{ed}
+\icmlauthor{Eee Pppp}{ed}
+\end{icmlauthorlist}
+
+\vskip 0.3in
+]
+
+\begin{abstract}
+Do we need an abstract?
+\end{abstract}
+\section{Introduction}
+\section{Related Work}
+Tackling the question of generalizing well while having a large number of parameters, \cite{intrinsic} found that using a small number of parameters (the \textit{intrinsic dimension}) projected into a larger space using a random matrix can lead to good generalization. \cite{sgdAlign} have studied properties of Gradient Descent algorithm that contribute to generalization.\\
+Recent works have also demonstrated that a well-initiated subset of a network can yield good performance: \cite{frankle2018lottery} used pruning techniques to uncover a \textit{"winning ticket"}: a subset of weights whose initialization allow them to train effectively, and even achieve better performance when trained separately. \cite{lotteryAtScale} have shown that the winning ticket is more stable if the pruning is done at an early stage of training instead on the initial weights. Building upon them, \cite{generalizingLottery} have successfully used the same winning ticket for multiple image datasets, and using different optimizers.\\
+As mentioned, \cite{allLayers} have studied the role of different layers. By re-initialization and measuring the change in performance, they identified \textit{critical} and \textit{ambient} layers (\textit{robust} in early versions). Critical layers are very sensitive to re-initialization, while resetting ambient layers is negligible.\\
+Others have studied "freezing" weights: fixing a subset of the weights, and training the rest of the network normally. \cite{freezeout} used layer freezing in order to accelerate training. \cite{fixLastLayerToHadamard} have shown that using a fixed Hadamard matrix as the last layer do not decrease performance. Later, \cite{learningNothing} fixed the majority of network parameters, while still preserving high accuracy. 
+
+\bibliography{main}
+\bibliographystyle{icml2019}
+\end{document}
