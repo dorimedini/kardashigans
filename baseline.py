@@ -37,4 +37,4 @@ class Baseline(SimpleExperiment):
 
     def get_layer_indices_list(self, trainer):
         """ We want to check robustness of each individual layer by itself """
-        return [[layer] for layer in range(trainer.get_n_parameter_layers())]
+        return [[layer] for layer in trainer.get_weighted_layers_indices()]
