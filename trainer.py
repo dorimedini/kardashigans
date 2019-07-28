@@ -4,18 +4,19 @@ from keras.layers import Input, Dense
 from keras.models import Model
 import numpy as np
 from kardashigans.verbose import Verbose
-from keras.callbacks import Callback
 
 
 class BaseTrainer(Verbose):
     """
     Base class for Trainer
     """
+
     def __init__(self,
                  dataset,
                  n_layers,
                  batch_size,
                  epochs,
+                 normalize_data=True,
                  **kwargs):
         """
         :param dataset: keras.datasets.mnist, for example
@@ -94,8 +95,8 @@ class BaseTrainer(Verbose):
     def go(self):
         raise NotImplementedError
 
-    @staticmethod
-    def freeze_layers(layers, layers_to_freeze):
+    def freeze_layers(self, layers: list, layers_to_freeze: list):
+        self.logger.debug("Freezing layers {}".format(layers_to_freeze))
         for idx in layers_to_freeze:
             layers[idx].trainable = False
 
@@ -107,6 +108,7 @@ class BaseTrainer(Verbose):
 
 class FCTrainer(BaseTrainer):
     """ Trains a fully connected network on a dataset """
+
     def __init__(self,
                  dataset,
                  n_layers=3,
@@ -205,6 +207,7 @@ class FCFreezeTrainer(FCTrainer):
         Overrides the _create_layers method of FCTrainer to allow layer
         freezing and weight initialization.
     """
+
     def __init__(self, layers_to_freeze=None, weight_map=None, **kwargs):
         """
         :param layers_to_freeze: Optional list of layer indexes to set to
@@ -221,10 +224,8 @@ class FCFreezeTrainer(FCTrainer):
     def go(self):
         layers = self._create_layers()
         self.freeze_layers(layers, self._layers_to_freeze)
-        self.logger.debug("Freezing layers {}".format(self._layers_to_freeze))
         self.set_layers_weights(layers, self._weight_map)
         connected_layers = self._connect_layers(layers)
-        # TODO: Shouldn't layers[0] be connected_layers[0]?
         model = Model(layers[0], connected_layers[-1])
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
         self.logger.info(model.summary())
