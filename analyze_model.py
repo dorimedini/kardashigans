@@ -2,6 +2,7 @@ import numpy as np
 import collections
 import matplotlib.pylab as plt
 import seaborn as sns
+import csv
 
 from keras import backend as K
 from kardashigans.verbose import Verbose
@@ -101,12 +102,26 @@ class AnalyzeModel(object):
         plt.show()
 
     @staticmethod
-    def generate_heatmap_from_results(heatmap_name: str, results: dict, save_results_path: str, verbose=False):
+    def export_results_to_csv(results, row_labels, col_labels, filename, output_dir):
+        head_row = [""] + col_labels
+        with open(output_dir + filename, 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(head_row)
+            for exp_data, exp_name in zip(results.values(), row_labels):
+                row = [exp_name] + list(exp_data.values())
+                writer.writerow(row)
+
+    @staticmethod
+    def generate_heatmap_from_results(heatmap_name: str, results: dict, save_results_path: str):
         data = [list(value.values()) for value in results.values()]
-        row_labels = list(results.keys())
-        col_labels = list(results[row_labels[0]].keys())
+        row_labels = ["Layers {}".format(layers) for layers in results.keys()]
+        some_row = list(results.values())[0]
+        col_labels = ["Epoch {}".format(e) for e in some_row.keys()]
         AnalyzeModel.generate_heatmap(data=data,
-                                      row_labels=["Layers {}".format(layers) for layers in row_labels],
-                                      col_labels=["Epoch {}".format(e) for e in col_labels],
+                                      row_labels=row_labels,
+                                      col_labels=col_labels,
                                       filename="{}_heatmap.png".format(heatmap_name),
                                       output_dir=save_results_path)
+        AnalyzeModel.export_results_to_csv(results=results, row_labels=row_labels, col_labels=col_labels,
+                                           filename="{}_results.csv".format(heatmap_name),
+                                           output_dir=save_results_path)
