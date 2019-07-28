@@ -2,6 +2,7 @@
 from keras import optimizers
 from keras.layers import Input, Dense
 from keras.models import Model
+from keras.applications import VGG16, VGG19
 import numpy as np
 from kardashigans.verbose import Verbose
 
@@ -240,23 +241,93 @@ class FCFreezeTrainer(FCTrainer):
         return model
 
 
-class SaveWeightslAtEpochsCallback(Callback):
-    def __init__(self, epoch_to_weights: dict, period=None, verbose=False):
-        super().__init__()
-        self.epoch_to_weights = epoch_to_weights
-        self.period = period if period else []
+class VGGTrainer(BaseTrainer):
+    """
+    Trains a VGG network on a dataset
+    """
+
+    def __init__(self,
+                 dataset,
+                 n_classes=10,
+                 vgg_size=16,
+                 epochs=100,
+                 batch_size=32,
+                 optimizer=optimizers.SGD(momentum=0.9, nesterov=True),
+                 loss='sparse_categorical_crossentropy',
+                 metrics=None,
+                 layers_to_freeze=None,
+                 weight_map=None,
+                 imagenet_weights=False,
+                 **kwargs):
+        """
+        :param dataset: Keras dataset
+        :param n_classes: Number of output classes
+        :param vgg_size: Size of vgg model. Supporting only 16,19
+        :param epochs: Number of train Epochs
+        :param batch_size: Size of train batches
+        :param optimizer: Optimizer used for training
+        :param loss: Type of loss to use
+        :param metrics: Metrics for evaluation : List
+        :param layers_to_freeze: Optional list of layer indexes to set to
+            'untrainable', i.e. their weights cannot change during
+            training.
+        :param weight_map: Optional. Maps layer indexes to initial weight
+            values to use (instead of random init). Intended for use
+            with frozen layers.
+        :param imagenet_weights: True if the model should initialize to pretrained imagenet weights
+        """
+        super().__init__(dataset=dataset,
+                         n_layers=vgg_size,
+                         batch_size=batch_size,
+                         epochs=epochs,
+                         normalize_data=False,
+                         **kwargs)
+
+        if self.get_n_layers() not in self.get_supported_models():
+            self.logger.error("VGG size not supported %d, supporting only %s", self.get_n_layers(),
+                              str(list(self.get_supported_models().keys())))
+            raise ValueError("VGG size not supported")
+        self._imagenet_weights = 'imagenet' if imagenet_weights else None
+        self._n_classes = n_classes
+        self._optimizer = optimizer
+        self._loss = loss
+        self._metrics = metrics if metrics else ['accuracy']
+        self._layers_to_freeze = layers_to_freeze if layers_to_freeze else []
+        self._weight_map = weight_map if weight_map else {}
+
+    def get_weighted_layers_indices(self):
+        _, result = self.get_supported_models()[self.get_n_layers()]
+        return result
+
+    def create_model(self):
+        input_layer = Input(shape=self._shape)
+        try:
+            vgg, _ = self.get_supported_models()[self.get_n_layers()]
+        except KeyError:
+            raise ValueError("VGG size not supported")
+        return vgg(weights=self._imagenet_weights, classes=self._n_classes, input_tensor=input_layer)
+
+    def go(self):
+        model = self.create_model()
+        self.set_layers_weights(model.layers, self._weight_map)
+        self.freeze_layers(model.layers, self._layers_to_freeze)
+        model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
+        self.logger.info(model.summary())
+        model.fit(self._x_train, self._y_train,
+                  shuffle=True,
+                  epochs=self._epochs,
+                  callbacks=self._checkpoint_callbacks,
+                  batch_size=self._batch_size,
+                  validation_data=(self._x_test, self._y_test))
+        return model
 
     @staticmethod
-    def get_weights(model):
-        return [layer.get_weights() for layer in model.layers]
+    def get_supported_models():
+        """
+        :return: model factory and weighted layers indices list per vgg_size
 
-    def on_train_begin(self, logs=None):
-        self.epoch_to_weights["start"] = self.get_weights(self.model)
-
-    def on_epoch_end(self, epoch, logs=None):
-        if epoch in self.period:
-            self.epoch_to_weights['epoch_{}'.format(epoch)] =\
-                self.get_weights(self.model)
-
-    def on_train_end(self, logs=None):
-        self.epoch_to_weights["end"] = self.get_weights(self.model)
+        """
+        return {
+            16: (VGG16, [1, 2, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 17, 20, 21, 22]),
+            19: (VGG19, [1, 2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18, 19, 20, 23, 24, 25])
+        }
