@@ -1,3 +1,4 @@
+import json
 import keras
 from kardashigans.verbose import Verbose
 from keras.callbacks import Callback
@@ -5,18 +6,18 @@ from keras.callbacks import Callback
 
 class ResourceManager(Verbose):
     """ Handles saving / loading trained models """
-    def __init__(self, model_save_dir, model_load_dir):
+    def __init__(self, save_dir, load_dir):
         """
-        :param model_save_dir: All saved models will be stored at this
-            directory, under a subdirectory named by the date / time of
-            initialization of the resource manager.
-        :param model_load_dir: All loaded models are loaded from this
-            directory. Loaded models must be directly contained in this
-            path.
+        :param save_dir: All saved files will be stored at this directory,
+            under a subdirectory named by the date / time of initialization
+            of the resource manager.
+        :param load_dir: All loaded files are loaded from this directory.
+            Loaded files (models / evaluation data etc.) must be directly
+            contained in this directory.
         """
         super(ResourceManager, self).__init__()
-        self._model_save_dir = self._add_slash(model_save_dir)
-        self._model_load_dir = self._add_slash(model_load_dir)
+        self._save_dir = self._add_slash(save_dir)
+        self._load_dir = self._add_slash(load_dir)
         self._model_file_template = "{model_name}.h5"
 
     def _add_slash(self, path_to_dir):
@@ -25,10 +26,10 @@ class ResourceManager(Verbose):
         return path_to_dir
 
     def _get_model_save_fullpath(self, model_name):
-        return self._model_save_dir + self._model_file_template.format(model_name=model_name)
+        return self._save_dir + self._model_file_template.format(model_name=model_name)
 
     def _get_model_load_fullpath(self, model_name):
-        return self._model_load_dir + self._model_file_template.format(model_name=model_name)
+        return self._load_dir + self._model_file_template.format(model_name=model_name)
 
     def _get_checkpoint_model_name(self, model_name, epoch):
         return model_name + "_epoch_{}".format(epoch)
@@ -41,9 +42,61 @@ class ResourceManager(Verbose):
         return ['start'] + period + ['end']
 
     def get_epoch_save_callback(self, model_name, period):
-        filepath_template = self._model_save_dir + self._get_checkpoint_file_template(model_name)
+        filepath_template = self._save_dir + self._get_checkpoint_file_template(model_name)
         return ResourceManager.SaveModelAtEpochsCallback(filepath_template=filepath_template,
                                                          period=period)
+
+    def _get_results_save_fullpath(self, model_name, results_name):
+        return "{}{}_{}.json".format(self._save_dir, model_name, results_name)
+
+    def _get_results_load_fullpath(self, model_name, results_name):
+        return "{}{}_{}.json".format(self._load_dir, model_name, results_name)
+
+    def save_results(self, results, model_name, results_name):
+        """
+        Saves results object to JSON file.
+
+        File name will be derived by model name and the name of the
+        specific result. To prevent accidental overwrite of different
+        results for the same model, the results name parameter has no
+        default value.
+
+        :param results: A JSONable object to output
+        :param model_name: The model name of the model analyzed
+        :param results_name: Unique (up to model name) name of results
+            object
+        """
+        with open(self._get_results_save_fullpath(model_name, results_name), 'w') as file:
+            file.write(json.dumps(results))
+
+    def load_results(self, model_name, results_name):
+        """ save_results^{-1} """
+        with open(self._get_results_load_fullpath(model_name, results_name), 'r') as file:
+            return json.loads(file.read())
+
+    def get_existing_results(self, model_name, results_name):
+        """
+        Basically a soft wrapper for the load_results method
+        """
+        try:
+            return self.load_results(model_name, results_name)
+        except Exception as e:
+            self.logger.warning("No previous results found, dumping new results. "
+                                "Model/results names: {}/{}".format(model_name, results_name))
+            self.logger.warning("Exception raised: {}".format(e))
+        return {}
+
+    def update_results(self, results, model_name, results_name):
+        """
+        Merges input results with previous results (if they exist) and
+        outputs merged dict to disk (overwriting previous results).
+
+        If conflicting result keys exist nothing is promised! Use with
+        care
+        """
+        prev_results = self.get_existing_results(model_name, results_name)
+        merged_results = {**results, **prev_results}
+        self.save_results(merged_results, model_name, results_name)
 
     def save_model(self, model, model_name):
         model.save(self._get_model_save_fullpath(model_name),
