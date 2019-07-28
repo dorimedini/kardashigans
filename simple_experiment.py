@@ -41,8 +41,8 @@ class SimpleExperiment(ExperimentWithCheckpoints):
         robustness when we reset the second half of the layers, then
         in the implementing class we do the following:
 
-        all_layers = list(range(trainer.get_n_parameter_layers()))
-        halfway = len(all_layers) // 2
+        all_layers = get_weighted_layers_indices()
+        halfway = all_layers[0] + len(all_layers) // 2
         return [all_layers[:halfway], all_layers[halfway:]]
         """
         raise NotImplementedError
