@@ -31,8 +31,12 @@ class BaseTrainer(Verbose):
         self._dataset = dataset
         self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
-        (self._x_train, self._y_train), (self._x_test, self._y_test) = self._load_data_normalized()
-        self._shape = (np.prod(self._x_train.shape[1:]),)
+        if normalize_data:
+            (self._x_train, self._y_train), (self._x_test, self._y_test) = self._load_data_normalized()
+            self._shape = (np.prod(self._x_train.shape[1:]),)
+        else:
+            (self._x_train, self._y_train), (self._x_test, self._y_test) = self._dataset.load_data()
+            self._shape = self._x_train.shape[1:]
         self.logger.debug("Data shape: {}".format(self._shape))
 
     def _load_data_normalized(self):
