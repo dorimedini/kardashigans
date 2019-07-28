@@ -234,7 +234,6 @@ class ExperimentWithCheckpoints(Experiment):
             prev_results = self._resource_manager.get_existing_results(model_name, dirty_results_name)
             prev_clean = self._resource_manager.get_existing_results(model_name, clean_results_name)
             if prev_results:
-                print("shouldn't get here")
                 # Start by checking if there's anything to do.
                 # If all requested results exist we should just return them.
                 no_new_layer_sets = set([str(layers) for layers in layer_indices_list]).issubset(set(prev_results.keys()))
