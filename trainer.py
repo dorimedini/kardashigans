@@ -4,6 +4,7 @@ from keras.layers import Input, Dense
 from keras.models import Model
 from keras.applications import VGG16, VGG19
 import numpy as np
+import math
 from kardashigans.verbose import Verbose
 
 
@@ -18,18 +19,23 @@ class BaseTrainer(Verbose):
                  batch_size,
                  epochs,
                  normalize_data=True,
+                 prune_threshold=float('nan'),
                  **kwargs):
         """
         :param dataset: keras.datasets.mnist, for example
         :param n_layers: Number of layers in the network
         :param batch_size: Number of samples per batch
         :param epochs: Number of epochs to train
+        :param prune_threshold: If a (positive) float value is provided,
+            all edge weights with absolute value less than the threshold
+            will be set to zero
         """
         super(BaseTrainer, self).__init__()
         self._n_layers = n_layers
         self._batch_size = batch_size
         self._epochs = epochs
         self._dataset = dataset
+        self._prune_threshold = prune_threshold
         self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
         if normalize_data:
@@ -98,8 +104,33 @@ class BaseTrainer(Verbose):
     def _train(self):
         raise NotImplementedError
 
+    def _prune(self, model):
+        """ Prunes model (in place) using prune_threshold """
+        if math.isnan(self._prune_threshold):
+            return
+        # Layer 0 has no input edges, start from layer 1
+        pruned_edges = 0
+        for i in range(1, len(model.layers)):
+            weights = model.layers[i].get_weights()
+            input_weights = weights[0]  # weights[1] is the list of node biases
+            # The incoming edge weights of node N is incoming_edge_weights[N]
+            new_weights = []
+            for node_input_weights in input_weights:
+                new_node_weights = []
+                for w in node_input_weights:
+                    if math.fabs(w) < threshold:
+                        pruned_edges += 1
+                        new_node_weights.append(0)
+                    else:
+                        new_node_weights.append(w)
+                new_weights.append(new_node_weights)
+            model.layers[i].set_weights([np.array(new_weights), weights[1]])
+        v = Verbose()
+        v.logger.debug("Pruned {} edges (with threshold {})".format(pruned_edges, threshold))
+
     def _post_train(self, model):
-        pass
+        """ Inheriting classes C should call this method in the overridden _post_train """
+        self._prune(model)
 
     def go(self):
         model = self._train()
