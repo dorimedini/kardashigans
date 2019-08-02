@@ -112,7 +112,11 @@ class BaseTrainer(Verbose):
 
     def _prune(self, model):
         """ Prunes model (in place) using prune_threshold """
-        if math.isnan(self._prune_threshold):
+        BaseTrainer.prune_trained_model(model, self._prune_threshold)
+
+    @staticmethod
+    def prune_trained_model(model, threshold):
+        if math.isnan(threshold):
             return
         # Layer 0 has no input edges, start from layer 1
         pruned_edges = 0
