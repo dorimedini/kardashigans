@@ -80,6 +80,9 @@ class BaseTrainer(Verbose):
         self.logger.debug("Done")
         return connected_layers
 
+    def set_prune_threshold(self, threshold=float('nan')):
+        self._prune_threshold = threshold
+
     def get_n_layers(self):
         return self._n_layers
 
@@ -97,6 +100,9 @@ class BaseTrainer(Verbose):
 
     def get_test_data(self):
         return self._x_test, self._y_test
+
+    def get_prune_threshold(self):
+        return self._prune_threshold
 
     def add_checkpoint_callback(self, callback):
         self._checkpoint_callbacks.append(callback)
