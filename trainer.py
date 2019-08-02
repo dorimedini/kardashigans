@@ -95,8 +95,16 @@ class BaseTrainer(Verbose):
     def add_checkpoint_callback(self, callback):
         self._checkpoint_callbacks.append(callback)
 
-    def go(self):
+    def _train(self):
         raise NotImplementedError
+
+    def _post_train(self, model):
+        pass
+
+    def go(self):
+        model = self._train()
+        self._post_train(model)
+        return model
 
     def freeze_layers(self, layers: list, layers_to_freeze: list):
         self.logger.debug("Freezing layers {}".format(layers_to_freeze))
@@ -188,7 +196,7 @@ class FCTrainer(BaseTrainer):
     #
     # The weight_map, if defined, should map layer indexes (in the
     # range [0,n_layers+1]) to weights (as output by layer.get_weights()).
-    def go(self):
+    def _train(self):
         layers = self._create_layers()
         connected_layers = self._connect_layers(layers)
         # TODO: Shouldn't layers[0] be connected_layers[0]?
@@ -224,7 +232,7 @@ class FCFreezeTrainer(FCTrainer):
         self._layers_to_freeze = layers_to_freeze if layers_to_freeze else []
         self._weight_map = weight_map if weight_map else {}
 
-    def go(self):
+    def _train(self):
         layers = self._create_layers()
         self.freeze_layers(layers, self._layers_to_freeze)
         self.set_layers_weights(layers, self._weight_map)
@@ -307,7 +315,7 @@ class VGGTrainer(BaseTrainer):
             raise ValueError("VGG size not supported")
         return vgg(weights=self._imagenet_weights, classes=self._n_classes, input_tensor=input_layer)
 
-    def go(self):
+    def _train(self):
         model = self.create_model()
         self.set_layers_weights(model.layers, self._weight_map)
         self.freeze_layers(model.layers, self._layers_to_freeze)
