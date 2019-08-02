@@ -1,8 +1,10 @@
 import numpy as np
 import collections
 import matplotlib.pylab as plt
+import matplotlib.pyplot as pyplot
 import seaborn as sns
 import csv
+import os
 
 from keras import backend as K
 from kardashigans.verbose import Verbose
@@ -125,3 +127,20 @@ class AnalyzeModel(object):
         AnalyzeModel.export_results_to_csv(results=results, row_labels=row_labels, col_labels=col_labels,
                                            filename="{}_results.csv".format(heatmap_name),
                                            output_dir=save_results_path)
+
+    @staticmethod
+    def generate_robustness_winnery_correlation_graph(pruned_robustness,
+                                                      unpruned_robustness,
+                                                      winnery_intersection_ratio,
+                                                      output_dir,
+                                                      filename):
+        pyplot.style.use('seaborn-darkgrid')
+        pyplot.figure()
+        palette = pyplot.get_cmap('Set1')
+        pyplot.plot(pruned_robustness, marker='', color=palette(0), linewidth=1, alpha=0.9, label='Robustness (pruned)')
+        pyplot.plot(unpruned_robustness, marker='', color=palette(1), linewidth=1, alpha=0.9, label='Robustness (unpruned)')
+        pyplot.plot(winnery_intersection_ratio, marker='', color=palette(2), linewidth=1, alpha=0.9, label='Winning Ticket Intersection (ratio)')
+        pyplot.legend()
+        pyplot.title("Robustness & Winning Ticket Intersection by Layer", loc='right', fontsize=12, fontweight=0, color='orange')
+        pyplot.xlabel("Layer")
+        pyplot.savefig(os.path.join(output_dir, filename), format='png')
