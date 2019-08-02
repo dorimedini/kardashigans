@@ -4,6 +4,7 @@ from keras.layers import Input, Dense
 from keras.models import Model
 from keras.applications import VGG16, VGG19
 import numpy as np
+import math
 from kardashigans.verbose import Verbose
 
 
@@ -18,18 +19,23 @@ class BaseTrainer(Verbose):
                  batch_size,
                  epochs,
                  normalize_data=True,
+                 prune_threshold=float('nan'),
                  **kwargs):
         """
         :param dataset: keras.datasets.mnist, for example
         :param n_layers: Number of layers in the network
         :param batch_size: Number of samples per batch
         :param epochs: Number of epochs to train
+        :param prune_threshold: If a (positive) float value is provided,
+            all edge weights with absolute value less than the threshold
+            will be set to zero
         """
         super(BaseTrainer, self).__init__()
         self._n_layers = n_layers
         self._batch_size = batch_size
         self._epochs = epochs
         self._dataset = dataset
+        self._prune_threshold = prune_threshold
         self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
         if normalize_data:
@@ -98,8 +104,18 @@ class BaseTrainer(Verbose):
     def _train(self):
         raise NotImplementedError
 
+    def _prune(self, model):
+        """ Prunes model (in place) using prune_threshold """
+        if math.isnan(self._prune_threshold):
+            return
+        for i in range(len(model.layers)):
+            weights = model.layers[i].get_weights()
+            new_weights = [w if math.fabs(w) >= self._prune_threshold else 0 for w in weights]
+            model.layers[i].set_weights(new_weights)
+
     def _post_train(self, model):
-        pass
+        """ Inheriting classes C should call this method in the overridden _post_train """
+        self._prune(model)
 
     def go(self):
         model = self._train()
