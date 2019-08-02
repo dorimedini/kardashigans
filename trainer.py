@@ -112,12 +112,17 @@ class BaseTrainer(Verbose):
 
     def _prune(self, model):
         """ Prunes model (in place) using prune_threshold """
-        if math.isnan(self._prune_threshold):
+        BaseTrainer.prune_trained_model(model, self._prune_threshold)
+
+    @staticmethod
+    def prune_trained_model(model, threshold):
+        if math.isnan(threshold):
             return
         for i in range(len(model.layers)):
             weights = model.layers[i].get_weights()
-            new_weights = [w if math.fabs(w) >= self._prune_threshold else 0 for w in weights]
+            new_weights = [w if math.fabs(w) >= threshold else 0 for w in weights]
             model.layers[i].set_weights(new_weights)
+
 
     def _post_train(self, model):
         """ Inheriting classes C should call this method in the overridden _post_train """
