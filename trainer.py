@@ -120,7 +120,9 @@ class BaseTrainer(Verbose):
             return
         # Layer 0 has no input edges, start from layer 1
         for i in range(1, len(model.layers)):
+            print("WHOOPS")
             weights = model.layers[i].get_weights()
+            print("I DID IT AGAIN")
             input_weights = weights[0]  # weights[1] is the list of node biases
             # The incoming edge weights of node N is incoming_edge_weights[N]
             new_weights = [[w if math.fabs(w) >= threshold else 0 for w in node_input_weights]
