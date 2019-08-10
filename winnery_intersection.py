@@ -1,14 +1,12 @@
 from kardashigans.analyze_model import AnalyzeModel
 from kardashigans.baseline import Baseline
-from kardashigans.experiment import Experiment
-from kardashigans.trainer import BaseTrainer
+from kardashigans.experiment import Experiment, ExperimentWithCheckpoints
+from kardashigans.trainer import FCTrainer
 from keras.datasets import mnist, cifar10
 import math
-import numpy as np
-import pandas as pd
 
 
-class WinneryIntersection(Experiment):
+class WinneryIntersection(ExperimentWithCheckpoints):
     """
     Experiment designed to check correlation between robustness of layer i
     of some trained model, and the number of non-zero weights in layer i of
@@ -26,6 +24,7 @@ class WinneryIntersection(Experiment):
                                                       mnist_name: WinneryIntersection.construct_dataset_trainer(mnist),
                                                       cifar10_name: WinneryIntersection.construct_dataset_trainer(cifar10)
                                                   },
+                                                  period=[],
                                                   *args, **kwargs)
 
     @staticmethod
@@ -37,9 +36,10 @@ class WinneryIntersection(Experiment):
         # Train without pruning built-in, to compare pre-pruned model
         return Baseline.construct_dataset_trainer(dataset)
 
-    def _get_robustness_list(self, model, trainer, test_data):
+    def _get_robustness_list(self, trained_model, untrained_model, trainer, test_data):
         return [AnalyzeModel.calc_robustness(test_data=test_data,
-                                             model=model,
+                                             model=trained_model,
+                                             source_weights_model=untrained_model,
                                              layer_indices=[i],
                                              batch_size=32)
                 for i in trainer.get_weighted_layers_indices()]
@@ -65,12 +65,19 @@ class WinneryIntersection(Experiment):
         winnery_intersection_ratio = {}
         for model_name, trainer in self.get_trainer_map().items():
             test_data = self.get_test_data(model_name)
-            with self.open_model(model_name) as model:
-                unpruned_robustness[model_name] = self._get_robustness_list(model, trainer, test_data)
-                BaseTrainer.prune_trained_model(model, self._prune_threshold)
-                pruned_robustness[model_name] = self._get_robustness_list(model, trainer, test_data)
+            with self.open_model(model_name) as trained_model:
+                with self.open_model_at_epoch(model_name, 'start') as untrained_model:
+                    unpruned_robustness[model_name] = self._get_robustness_list(trained_model,
+                                                                                untrained_model,
+                                                                                trainer,
+                                                                                test_data)
+                    FCTrainer.prune_trained_model(trained_model, self._prune_threshold)
+                    pruned_robustness[model_name] = self._get_robustness_list(trained_model,
+                                                                              untrained_model,
+                                                                              trainer,
+                                                                              test_data)
                 winnery_intersection_size[model_name], winnery_intersection_ratio[model_name] = \
-                    self._get_winnery_intersection_size_and_ratio(model, trainer)
+                    self._get_winnery_intersection_size_and_ratio(trained_model, trainer)
         for model_name in self.get_trainer_map().keys():
             AnalyzeModel.generate_robustness_winnery_correlation_graph(pruned_robustness[model_name],
                                                                        unpruned_robustness[model_name],
