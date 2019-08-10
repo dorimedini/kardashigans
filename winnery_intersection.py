@@ -4,6 +4,7 @@ from kardashigans.experiment import Experiment, ExperimentWithCheckpoints
 from kardashigans.trainer import FCTrainer
 from keras.datasets import mnist, cifar10
 import math
+import numpy as np
 
 
 class WinneryIntersection(ExperimentWithCheckpoints):
@@ -51,9 +52,8 @@ class WinneryIntersection(ExperimentWithCheckpoints):
             weights = model.layers[i].get_weights()
             input_weights = weights[0]
             # The winning ticket is the edge set consisting of non-zero weighted edges
-            intersection_size = sum([len([w for w in node_input_weights if w != 0])
-                                     for node_input_weights in input_weights])
-            total_weights = sum([len(node_input_weights) for node_input_weights in input_weights])
+            intersection_size = np.count_nonzero(input_weights)
+            total_weights = input_weights.size
             winnery_intersection_size.append(intersection_size)
             winnery_intersection_ratio.append(float(intersection_size) / float(total_weights))
         return winnery_intersection_size, winnery_intersection_ratio
