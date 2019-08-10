@@ -193,16 +193,8 @@ class FCTrainer(BaseTrainer):
             weights = model.layers[i].get_weights()
             input_weights = weights[0]  # weights[1] is the list of node biases
             # The incoming edge weights of node N is incoming_edge_weights[N]
-            new_weights = []
-            for node_input_weights in input_weights:
-                new_node_weights = []
-                for w in node_input_weights:
-                    if math.fabs(w) < threshold:
-                        pruned_edges += 1
-                        new_node_weights.append(0)
-                    else:
-                        new_node_weights.append(w)
-                new_weights.append(new_node_weights)
+            new_weights = np.where(input_weights < threshold, 0, input_weights)
+            pruned_edges += new_weights.size - np.count_nonzero(new_weights)
             model.layers[i].set_weights([np.array(new_weights), weights[1]])
         v = Verbose()
         v.logger.debug("Pruned {} edges (with threshold {})".format(pruned_edges, threshold))
