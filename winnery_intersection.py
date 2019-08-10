@@ -49,10 +49,13 @@ class WinneryIntersection(Experiment):
         winnery_intersection_ratio = []
         for i in trainer.get_weighted_layers_indices():
             weights = model.layers[i].get_weights()
+            input_weights = weights[0]
             # The winning ticket is the edge set consisting of non-zero weighted edges
-            intersection_size = len([w for w in weights if w != 0])
+            intersection_size = sum([len([w for w in node_input_weights if w != 0])
+                                     for node_input_weights in input_weights])
+            total_weights = sum([len(node_input_weights) for node_input_weights in input_weights])
             winnery_intersection_size.append(intersection_size)
-            winnery_intersection_ratio.append(float(intersection_size) / float(len(weights)))
+            winnery_intersection_ratio.append(float(intersection_size) / float(total_weights))
         return winnery_intersection_size, winnery_intersection_ratio
 
     def go(self):

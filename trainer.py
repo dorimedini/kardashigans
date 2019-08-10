@@ -118,10 +118,14 @@ class BaseTrainer(Verbose):
     def prune_trained_model(model, threshold):
         if math.isnan(threshold):
             return
-        for i in range(len(model.layers)):
+        # Layer 0 has no input edges, start from layer 1
+        for i in range(1, len(model.layers)):
             weights = model.layers[i].get_weights()
-            new_weights = [w if math.fabs(w) >= threshold else 0 for w in weights]
-            model.layers[i].set_weights(new_weights)
+            input_weights = weights[0]  # weights[1] is the list of node biases
+            # The incoming edge weights of node N is incoming_edge_weights[N]
+            new_weights = [[w if math.fabs(w) >= threshold else 0 for w in node_input_weights]
+                           for node_input_weights in input_weights]
+            model.layers[i].set_weights([np.array(new_weights), weights[1]])
 
 
     def _post_train(self, model):
