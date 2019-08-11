@@ -4,6 +4,7 @@ from keras.layers import Input, Dense
 from keras.models import Model
 from keras.applications import VGG16, VGG19
 import numpy as np
+import math
 from kardashigans.verbose import Verbose
 
 
@@ -18,18 +19,26 @@ class BaseTrainer(Verbose):
                  batch_size,
                  epochs,
                  normalize_data=True,
+                 prune_threshold=float('nan'),
                  **kwargs):
         """
         :param dataset: keras.datasets.mnist, for example
         :param n_layers: Number of layers in the network
         :param batch_size: Number of samples per batch
         :param epochs: Number of epochs to train
+        :param prune_threshold: If a (positive) float value is provided,
+            all edge weights with absolute value less than the threshold
+            will be set to zero.
+            Note that if a float value is passed it's assumed the _prune
+            method is implemented in the calling class (not implemented
+            in BaseTrainer)
         """
         super(BaseTrainer, self).__init__()
         self._n_layers = n_layers
         self._batch_size = batch_size
         self._epochs = epochs
         self._dataset = dataset
+        self._prune_threshold = prune_threshold
         self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
         if normalize_data:
@@ -74,6 +83,9 @@ class BaseTrainer(Verbose):
         self.logger.debug("Done")
         return connected_layers
 
+    def set_prune_threshold(self, threshold=float('nan')):
+        self._prune_threshold = threshold
+
     def get_n_layers(self):
         return self._n_layers
 
@@ -92,11 +104,28 @@ class BaseTrainer(Verbose):
     def get_test_data(self):
         return self._x_test, self._y_test
 
+    def get_prune_threshold(self):
+        return self._prune_threshold
+
     def add_checkpoint_callback(self, callback):
         self._checkpoint_callbacks.append(callback)
 
-    def go(self):
+    def _train(self):
         raise NotImplementedError
+
+    def _prune(self, model):
+        """ Prunes model (in place) using prune_threshold """
+        raise NotImplementedError
+
+    def _post_train(self, model):
+        """ Inheriting classes C should call this method in the overridden _post_train """
+        if not math.isnan(self._prune_threshold):
+            self._prune(model)
+
+    def go(self):
+        model = self._train()
+        self._post_train(model)
+        return model
 
     def freeze_layers(self, layers: list, layers_to_freeze: list):
         self.logger.debug("Freezing layers {}".format(layers_to_freeze))
@@ -151,6 +180,25 @@ class FCTrainer(BaseTrainer):
         self._loss = loss
         self._metrics = metrics if metrics else ['accuracy']
 
+    def _prune(self, model):
+        return FCTrainer.prune_trained_model(model, self._prune_threshold)
+
+    @staticmethod
+    def prune_trained_model(model, threshold):
+        if math.isnan(threshold):
+            return
+        # Layer 0 has no input edges, start from layer 1
+        pruned_edges = 0
+        for i in range(1, len(model.layers)):
+            weights = model.layers[i].get_weights()
+            input_weights = weights[0]  # weights[1] is the list of node biases
+            # The incoming edge weights of node N is incoming_edge_weights[N]
+            new_weights = np.where(input_weights < threshold, 0, input_weights)
+            pruned_edges += new_weights.size - np.count_nonzero(new_weights)
+            model.layers[i].set_weights([np.array(new_weights), weights[1]])
+        v = Verbose()
+        v.logger.debug("Pruned {} edges (with threshold {})".format(pruned_edges, threshold))
+
     def _create_layers(self):
         self.logger.debug("Creating {} layers".format(self._n_layers))
         # Input layer gets special treatment:
@@ -188,7 +236,7 @@ class FCTrainer(BaseTrainer):
     #
     # The weight_map, if defined, should map layer indexes (in the
     # range [0,n_layers+1]) to weights (as output by layer.get_weights()).
-    def go(self):
+    def _train(self):
         layers = self._create_layers()
         connected_layers = self._connect_layers(layers)
         # TODO: Shouldn't layers[0] be connected_layers[0]?
@@ -224,7 +272,7 @@ class FCFreezeTrainer(FCTrainer):
         self._layers_to_freeze = layers_to_freeze if layers_to_freeze else []
         self._weight_map = weight_map if weight_map else {}
 
-    def go(self):
+    def _train(self):
         layers = self._create_layers()
         self.freeze_layers(layers, self._layers_to_freeze)
         self.set_layers_weights(layers, self._weight_map)
@@ -307,7 +355,7 @@ class VGGTrainer(BaseTrainer):
             raise ValueError("VGG size not supported")
         return vgg(weights=self._imagenet_weights, classes=self._n_classes, input_tensor=input_layer)
 
-    def go(self):
+    def _train(self):
         model = self.create_model()
         self.set_layers_weights(model.layers, self._weight_map)
         self.freeze_layers(model.layers, self._layers_to_freeze)
