@@ -5,6 +5,7 @@ from keras.models import Model
 from keras.applications import VGG16, VGG19
 import numpy as np
 import math
+from kardashigans.analyze_model import AnalyzeModel
 from kardashigans.verbose import Verbose
 
 
@@ -124,17 +125,24 @@ class BaseTrainer(Verbose):
     def prune_trained_model(model, threshold):
         if math.isnan(threshold):
             return
+        v = Verbose()
         # Layer 0 has no input edges, start from layer 1
         pruned_edges = 0
         for i in range(1, len(model.layers)):
             weights = model.layers[i].get_weights()
             input_weights = weights[0]  # weights[1] is the list of node biases
+            weighted_threshold = threshold * np.linalg.norm(input_weights)
             # The incoming edge weights of node N is incoming_edge_weights[N]
-            new_weights = np.where((input_weights < threshold) & (input_weights > -threshold), 0, input_weights)
-            pruned_edges += new_weights.size - np.count_nonzero(new_weights)
+            new_weights = np.where(np.absolute(input_weights) < weighted_threshold, 0, input_weights)
             model.layers[i].set_weights([np.array(new_weights), weights[1]])
-        v = Verbose()
-        v.logger.debug("Pruned {} edges (with threshold {})".format(pruned_edges, threshold))
+            pruned_this_time = new_weights.size - np.count_nonzero(new_weights)
+            pruned_edges += pruned_this_time
+            percent_this_layer = (pruned_this_time * 100) // new_weights.size
+            v.logger.debug("Pruned {} edges from layer {} ({}%)".format(pruned_this_time, i, percent_this_layer))
+        total_edges = AnalyzeModel.total_edges(model)
+        percent = (pruned_edges * 100) // total_edges
+        v.logger.debug("Pruned a total of {}/{} edges ({}%) (with threshold {})"
+                       "".format(pruned_edges, total_edges, percent, threshold))
 
     def _post_train(self, model):
         """ Inheriting classes C should call this method in the overridden _post_train """

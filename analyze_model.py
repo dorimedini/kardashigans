@@ -52,6 +52,15 @@ class AnalyzeModel(object):
                     initializer_method.run(session=session)
 
     @staticmethod
+    def total_edges(model):
+        edges = 0
+        for layer in model.layers:
+            weights = layer.get_weights()
+            if weights:
+                edges += weights[0].size
+        return edges
+
+    @staticmethod
     def calc_robustness(test_data, model, source_weights_model=None, layer_indices=None, batch_size=32):
         """
         Evaluates the model on test data after re-initializing the layers
