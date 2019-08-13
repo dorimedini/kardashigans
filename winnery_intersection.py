@@ -1,7 +1,7 @@
 from kardashigans.analyze_model import AnalyzeModel
 from kardashigans.baseline import Baseline
 from kardashigans.experiment import Experiment, ExperimentWithCheckpoints
-from kardashigans.trainer import FCTrainer
+from kardashigans.trainer import BaseTrainer
 from keras.datasets import mnist, cifar10
 import math
 import numpy as np
@@ -71,7 +71,7 @@ class WinneryIntersection(ExperimentWithCheckpoints):
                                                                                 untrained_model,
                                                                                 trainer,
                                                                                 test_data)
-                    FCTrainer.prune_trained_model(trained_model, self._prune_threshold)
+                    BaseTrainer.prune_trained_model(trained_model, self._prune_threshold)
                     pruned_robustness[model_name] = self._get_robustness_list(trained_model,
                                                                               untrained_model,
                                                                               trainer,

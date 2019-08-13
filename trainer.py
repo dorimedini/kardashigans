@@ -39,6 +39,8 @@ class BaseTrainer(Verbose):
         self._epochs = epochs
         self._dataset = dataset
         self._prune_threshold = prune_threshold
+        if not math.isnan(prune_threshold):
+            assert prune_threshold > 0, "Only non-negative threshold values allowed! Got {}".format(prune_threshold)
         self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
         if normalize_data:
@@ -114,8 +116,23 @@ class BaseTrainer(Verbose):
         raise NotImplementedError
 
     def _prune(self, model):
-        """ Prunes model (in place) using prune_threshold """
-        raise NotImplementedError
+        return BaseTrainer.prune_trained_model(model, self._prune_threshold)
+
+    @staticmethod
+    def prune_trained_model(model, threshold):
+        if math.isnan(threshold):
+            return
+        # Layer 0 has no input edges, start from layer 1
+        pruned_edges = 0
+        for i in range(1, len(model.layers)):
+            weights = model.layers[i].get_weights()
+            input_weights = weights[0]  # weights[1] is the list of node biases
+            # The incoming edge weights of node N is incoming_edge_weights[N]
+            new_weights = np.where((input_weights < threshold) & (input_weights > -threshold), 0, input_weights)
+            pruned_edges += new_weights.size - np.count_nonzero(new_weights)
+            model.layers[i].set_weights([np.array(new_weights), weights[1]])
+        v = Verbose()
+        v.logger.debug("Pruned {} edges (with threshold {})".format(pruned_edges, threshold))
 
     def _post_train(self, model):
         """ Inheriting classes C should call this method in the overridden _post_train """
@@ -179,25 +196,6 @@ class FCTrainer(BaseTrainer):
         self._optimizer = optimizer
         self._loss = loss
         self._metrics = metrics if metrics else ['accuracy']
-
-    def _prune(self, model):
-        return FCTrainer.prune_trained_model(model, self._prune_threshold)
-
-    @staticmethod
-    def prune_trained_model(model, threshold):
-        if math.isnan(threshold):
-            return
-        # Layer 0 has no input edges, start from layer 1
-        pruned_edges = 0
-        for i in range(1, len(model.layers)):
-            weights = model.layers[i].get_weights()
-            input_weights = weights[0]  # weights[1] is the list of node biases
-            # The incoming edge weights of node N is incoming_edge_weights[N]
-            new_weights = np.where(input_weights < threshold, 0, input_weights)
-            pruned_edges += new_weights.size - np.count_nonzero(new_weights)
-            model.layers[i].set_weights([np.array(new_weights), weights[1]])
-        v = Verbose()
-        v.logger.debug("Pruned {} edges (with threshold {})".format(pruned_edges, threshold))
 
     def _create_layers(self):
         self.logger.debug("Creating {} layers".format(self._n_layers))
