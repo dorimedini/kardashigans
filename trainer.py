@@ -195,13 +195,13 @@ class FCTrainer(BaseTrainer):
         model = Model(layers[0], connected_layers[-1])
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
         self.logger.info(model.summary())
-        model.fit(self._x_train, self._y_train,
+        history = model.fit(self._x_train, self._y_train,
                   shuffle=True,
                   epochs=self._epochs,
                   callbacks=self._checkpoint_callbacks,
                   batch_size=self._batch_size,
                   validation_data=(self._x_test, self._y_test))
-        return model
+        return model, history.history
 
 
 class FCFreezeTrainer(FCTrainer):
@@ -232,13 +232,13 @@ class FCFreezeTrainer(FCTrainer):
         model = Model(layers[0], connected_layers[-1])
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
         self.logger.info(model.summary())
-        model.fit(self._x_train, self._y_train,
+        history = model.fit(self._x_train, self._y_train,
                   shuffle=True,
                   epochs=self._epochs,
                   callbacks=self._checkpoint_callbacks,
                   batch_size=self._batch_size,
                   validation_data=(self._x_test, self._y_test))
-        return model
+        return model, history.history
 
 
 class VGGTrainer(BaseTrainer):
@@ -313,13 +313,13 @@ class VGGTrainer(BaseTrainer):
         self.freeze_layers(model.layers, self._layers_to_freeze)
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
         self.logger.info(model.summary())
-        model.fit(self._x_train, self._y_train,
+        history = model.fit(self._x_train, self._y_train,
                   shuffle=True,
                   epochs=self._epochs,
                   callbacks=self._checkpoint_callbacks,
                   batch_size=self._batch_size,
                   validation_data=(self._x_test, self._y_test))
-        return model
+        return model, history.history
 
     @staticmethod
     def get_supported_models():

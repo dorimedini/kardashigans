@@ -120,8 +120,9 @@ class Experiment(Verbose):
             # If the load failed, or for some reason we need to fit the model:
             self.logger.warning("Failed to load model {} from disk".format(model_name))
             self.logger.debug("Fitting dataset {}".format(model_name))
-            model = self._trainers[model_name].go()
+            model, history = self._trainers[model_name].go()
             self._resource_manager.save_model(model, model_name)
+            self._resource_manager.save_history(history, model_name)
             return model
 
     def open_model(self, model_name):
