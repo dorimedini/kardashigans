@@ -143,6 +143,7 @@ class AnalyzeModel(object):
                                unpruned_robustness,
                                winnery_intersection_ratio,
                                l2_diffs,
+                               graph_name,
                                output_dir,
                                filename):
         pyplot.style.use('seaborn-darkgrid')
@@ -153,6 +154,7 @@ class AnalyzeModel(object):
         pyplot.plot(winnery_intersection_ratio, marker='', color=palette(2), linewidth=1, alpha=0.9, label='Winning Ticket Intersection (ratio)')
         pyplot.plot(l2_diffs, marker='', color=palette(3), linewidth=1, alpha=0.9, label='L2 norm of weight difference')
         pyplot.legend()
-        pyplot.title("Robustness & Winning Ticket Intersection by Layer", loc='right', fontsize=12, fontweight=0, color='orange')
+        pyplot.title("Robustness & Winning Ticket Intersection by Layer\n(output to {})".format(graph_name),
+                     loc='right', fontsize=12, fontweight=0, color='orange')
         pyplot.xlabel("Layer")
         pyplot.savefig(os.path.join(output_dir, filename), format='png')
