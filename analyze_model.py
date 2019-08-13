@@ -17,6 +17,16 @@ class AnalyzeModel(object):
     """
 
     @staticmethod
+    def l2_diff(model1, model2, layer, normalize=True):
+        # get_weights()[0] is the edge weights, get_weights()[1] is the node biases.
+        weights1 = model1.layers[layer].get_weights()[0]
+        weights2 = model2.layers[layer].get_weights()[0]
+        if normalize:
+            weights1 = weights1 / np.linalg.norm(weights1)
+            weights2 = weights2 / np.linalg.norm(weights2)
+        return np.linalg.norm(weights1 - weights2)
+
+    @staticmethod
     def _rernd_layers(model, layers_indices):
         session = K.get_session()
         for idx in layers_indices:
@@ -129,17 +139,19 @@ class AnalyzeModel(object):
                                            output_dir=save_results_path)
 
     @staticmethod
-    def generate_robustness_winnery_correlation_graph(pruned_robustness,
-                                                      unpruned_robustness,
-                                                      winnery_intersection_ratio,
-                                                      output_dir,
-                                                      filename):
+    def generate_winnery_graph(pruned_robustness,
+                               unpruned_robustness,
+                               winnery_intersection_ratio,
+                               l2_diffs,
+                               output_dir,
+                               filename):
         pyplot.style.use('seaborn-darkgrid')
         pyplot.figure()
         palette = pyplot.get_cmap('Set1')
         pyplot.plot(pruned_robustness, marker='', color=palette(0), linewidth=1, alpha=0.9, label='Robustness (pruned)')
         pyplot.plot(unpruned_robustness, marker='', color=palette(1), linewidth=1, alpha=0.9, label='Robustness (unpruned)')
         pyplot.plot(winnery_intersection_ratio, marker='', color=palette(2), linewidth=1, alpha=0.9, label='Winning Ticket Intersection (ratio)')
+        pyplot.plot(l2_diffs, marker='', color=palette(3), linewidth=1, alpha=0.9, label='L2 norm of weight difference')
         pyplot.legend()
         pyplot.title("Robustness & Winning Ticket Intersection by Layer", loc='right', fontsize=12, fontweight=0, color='orange')
         pyplot.xlabel("Layer")

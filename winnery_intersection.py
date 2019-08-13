@@ -63,10 +63,13 @@ class WinneryIntersection(ExperimentWithCheckpoints):
         pruned_robustness = {}
         winnery_intersection_size = {}
         winnery_intersection_ratio = {}
+        l2_norm_diff_map = {}
         for model_name, trainer in self.get_trainer_map().items():
             test_data = self.get_test_data(model_name)
             with self.open_model(model_name) as trained_model:
                 with self.open_model_at_epoch(model_name, 'start') as untrained_model:
+                    l2_norm_diff_map[model_name] = [AnalyzeModel.l2_diff(trained_model, untrained_model, i)
+                                                    for i in trainer.get_weighted_layers_indices()]
                     unpruned_robustness[model_name] = self._get_robustness_list(trained_model,
                                                                                 untrained_model,
                                                                                 trainer,
@@ -79,9 +82,9 @@ class WinneryIntersection(ExperimentWithCheckpoints):
                 winnery_intersection_size[model_name], winnery_intersection_ratio[model_name] = \
                     self._get_winnery_intersection_size_and_ratio(trained_model, trainer)
         for model_name in self.get_trainer_map().keys():
-            AnalyzeModel.generate_robustness_winnery_correlation_graph(pruned_robustness[model_name],
-                                                                       unpruned_robustness[model_name],
-                                                                       winnery_intersection_ratio[model_name],
-                                                                       self._output_dir,
-                                                                       model_name + "_robustness_winnery_correlation")
-        # TODO: Show winnery_intersection_ratio alongside unpruned / pruned robustness
+            AnalyzeModel.generate_winnery_graph(pruned_robustness=pruned_robustness[model_name],
+                                                unpruned_robustness=unpruned_robustness[model_name],
+                                                winnery_intersection_ratio=winnery_intersection_ratio[model_name],
+                                                l2_diffs=l2_norm_diff_map[model_name],
+                                                output_dir=self._output_dir,
+                                                filename=model_name + "_robustness_winnery_correlation")
