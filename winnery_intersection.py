@@ -86,5 +86,6 @@ class WinneryIntersection(ExperimentWithCheckpoints):
                                                 unpruned_robustness=unpruned_robustness[model_name],
                                                 winnery_intersection_ratio=winnery_intersection_ratio[model_name],
                                                 l2_diffs=l2_norm_diff_map[model_name],
+                                                graph_name=model_name,
                                                 output_dir=self._output_dir,
                                                 filename=model_name + "_robustness_winnery_correlation")
