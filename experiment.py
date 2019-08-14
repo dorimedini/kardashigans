@@ -227,13 +227,11 @@ class ExperimentWithCheckpoints(Experiment):
             return acc / clean_acc if relative else acc
 
         test_data = self.get_test_data(model_name)
-        clean_results_name = 'robustness_clean'
-        dirty_results_name = 'robustness_dirty'
+        results_name = 'robustness_results'
         prev_results = {}
         prev_clean = {}
         if self._use_prev_results:
-            prev_results = self._resource_manager.get_existing_results(model_name, dirty_results_name)
-            prev_clean = self._resource_manager.get_existing_results(model_name, clean_results_name)
+            prev_results = self._resource_manager.get_existing_results(model_name, results_name)
             if prev_results:
                 # Start by checking if there's anything to do.
                 # If all requested results exist we should just return them.
@@ -293,6 +291,5 @@ class ExperimentWithCheckpoints(Experiment):
                         self.logger.error("Exception: {}".format(e))
                         raise e
         if save:
-            self._update_results(results, model_name, dirty_results_name)
-            self._update_results(clean_eval, model_name, clean_results_name)
+            self._update_results(results, model_name, results_name)
         return results, clean_eval
