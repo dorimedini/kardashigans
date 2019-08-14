@@ -161,9 +161,7 @@ class AnalyzeModel(object):
             ba.append(result["ba"])
             bap.append(result["bap"])
         x = [base_name] + list(results.keys())
-        print("x", x)
         pyplot.figure()
-        print("ab", ab)
         pyplot.scatter(x, ab, marker='*', color=palette(0), linewidth=1, alpha=0.9,
                     label='ab')
         pyplot.scatter(x, abp, marker='+', color=palette(0), linewidth=1, alpha=0.9,
