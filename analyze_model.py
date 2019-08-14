@@ -17,14 +17,26 @@ class AnalyzeModel(object):
     """
 
     @staticmethod
-    def l2_diff(model1, model2, layer, normalize=True):
+    def _norm_diff_internal(model1, model2, layer, normalize, ord):
         # get_weights()[0] is the edge weights, get_weights()[1] is the node biases.
         weights1 = model1.layers[layer].get_weights()[0]
         weights2 = model2.layers[layer].get_weights()[0]
         if normalize:
-            weights1 = weights1 / np.linalg.norm(weights1)
-            weights2 = weights2 / np.linalg.norm(weights2)
-        return np.linalg.norm(weights1 - weights2)
+            weights1 = weights1 / np.linalg.norm(weights1, ord=ord)
+            weights2 = weights2 / np.linalg.norm(weights2, ord=ord)
+        return np.linalg.norm(weights1 - weights2, ord=ord)
+
+    @staticmethod
+    def l1_diff(model1, model2, layer, normalize=True):
+        return AnalyzeModel._norm_diff_internal(model1, model2, layer, normalize, ord=1)
+
+    @staticmethod
+    def l2_diff(model1, model2, layer, normalize=True):
+        return AnalyzeModel._norm_diff_internal(model1, model2, layer, normalize, ord=2)
+
+    @staticmethod
+    def linf_diff(model1, model2, layer, normalize=True):
+        return AnalyzeModel._norm_diff_internal(model1, model2, layer, normalize, ord=np.inf)
 
     @staticmethod
     def _rernd_layers(model, layers_indices):
@@ -143,16 +155,26 @@ class AnalyzeModel(object):
                                unpruned_robustness,
                                winnery_intersection_ratio,
                                l2_diffs,
+                               l1_diffs,
+                               linf_diffs,
                                graph_name,
                                output_dir,
                                filename):
         pyplot.style.use('seaborn-darkgrid')
         pyplot.figure()
         palette = pyplot.get_cmap('Set1')
-        pyplot.plot(pruned_robustness, marker='', color=palette(0), linewidth=1, alpha=0.9, label='Robustness (pruned)')
-        pyplot.plot(unpruned_robustness, marker='', color=palette(1), linewidth=1, alpha=0.9, label='Robustness (unpruned)')
-        pyplot.plot(winnery_intersection_ratio, marker='', color=palette(2), linewidth=1, alpha=0.9, label='Winning Ticket Intersection (ratio)')
-        pyplot.plot(l2_diffs, marker='', color=palette(3), linewidth=1, alpha=0.9, label='L2 norm of weight difference')
+        pyplot.plot(pruned_robustness, marker='', color=palette(0), linewidth=1, alpha=0.9,
+                    label='Robustness (pruned)')
+        pyplot.plot(unpruned_robustness, marker='', color=palette(1), linewidth=1, alpha=0.9,
+                    label='Robustness (unpruned)')
+        pyplot.plot(winnery_intersection_ratio, marker='', color=palette(2), linewidth=1, alpha=0.9,
+                    label='Winning Ticket Intersection (ratio)')
+        pyplot.plot(l2_diffs, marker='', color=palette(3), linewidth=1, alpha=0.9,
+                    label='L2 norm of weight difference')
+        pyplot.plot(l1_diffs, marker='', color=palette(4), linewidth=1, alpha=0.9,
+                    label='L1 norm of weight difference')
+        pyplot.plot(linf_diffs, marker='', color=palette(5), linewidth=1, alpha=0.9,
+                    label='Linf norm of weight difference')
         pyplot.legend()
         pyplot.title("Robustness & Winning Ticket Intersection by Layer\n(output to {})".format(graph_name),
                      loc='right', fontsize=12, fontweight=0, color='orange')
