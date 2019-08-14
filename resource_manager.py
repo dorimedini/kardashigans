@@ -1,5 +1,6 @@
 import json
 import keras
+import os
 from kardashigans.verbose import Verbose
 from keras.callbacks import Callback
 
@@ -101,6 +102,12 @@ class ResourceManager(Verbose):
     def save_model(self, model, model_name):
         model.save(self._get_model_save_fullpath(model_name),
                    overwrite=True)
+
+    def save_history(self, history, model_name):
+        history_file_name = model_name + '_history.json'
+        history_path = os.path.join(self._save_dir, history_file_name)
+        with open(history_path, 'w') as file:
+            file.write(json.dumps(history))
 
     def load_model(self, model_name, fullpath=None):
         if not fullpath:
