@@ -64,12 +64,18 @@ class WinneryIntersection(ExperimentWithCheckpoints):
         winnery_intersection_size = {}
         winnery_intersection_ratio = {}
         l2_norm_diff_map = {}
+        l1_norm_diff_map = {}
+        linf_norm_diff_map = {}
         for model_name, trainer in self.get_trainer_map().items():
             test_data = self.get_test_data(model_name)
             with self.open_model(model_name) as trained_model:
                 with self.open_model_at_epoch(model_name, 'start') as untrained_model:
                     l2_norm_diff_map[model_name] = [AnalyzeModel.l2_diff(trained_model, untrained_model, i)
                                                     for i in trainer.get_weighted_layers_indices()]
+                    l1_norm_diff_map[model_name] = [AnalyzeModel.l1_diff(trained_model, untrained_model, i)
+                                                    for i in trainer.get_weighted_layers_indices()]
+                    linf_norm_diff_map[model_name] = [AnalyzeModel.linf_diff(trained_model, untrained_model, i)
+                                                      for i in trainer.get_weighted_layers_indices()]
                     unpruned_robustness[model_name] = self._get_robustness_list(trained_model,
                                                                                 untrained_model,
                                                                                 trainer,
@@ -86,6 +92,8 @@ class WinneryIntersection(ExperimentWithCheckpoints):
                                                 unpruned_robustness=unpruned_robustness[model_name],
                                                 winnery_intersection_ratio=winnery_intersection_ratio[model_name],
                                                 l2_diffs=l2_norm_diff_map[model_name],
+                                                l1_diffs=l1_norm_diff_map[model_name],
+                                                linf_diffs=linf_norm_diff_map[model_name],
                                                 graph_name=model_name,
                                                 output_dir=self._output_dir,
                                                 filename=model_name + "_robustness_winnery_correlation")
