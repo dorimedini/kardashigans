@@ -144,3 +144,37 @@ class AnalyzeModel(object):
         pyplot.title("Robustness & Winning Ticket Intersection by Layer", loc='right', fontsize=12, fontweight=0, color='orange')
         pyplot.xlabel("Layer")
         pyplot.savefig(os.path.join(output_dir, filename), format='png')
+
+    @staticmethod
+    def generate_transfer_graph(results: dict, output_dir: str, filename="transfer_fig", base_name="base"):
+        print(results)
+        pyplot.style.use('seaborn-darkgrid')
+        palette = pyplot.get_cmap('Set1')
+        base_results = results.pop(base_name)
+        ab = [base_results["b"]]
+        abp = [base_results["b"]]
+        ba = [base_results["a"]]
+        bap = [base_results["a"]]
+        for result in results.values():
+            ab.append(result["ab"])
+            abp.append(result["abp"])
+            ba.append(result["ba"])
+            bap.append(result["bap"])
+        x = [base_name] + list(results.keys())
+        print("x", x)
+        pyplot.figure()
+        print("ab", ab)
+        pyplot.scatter(x, ab, marker='*', color=palette(0), linewidth=1, alpha=0.9,
+                    label='ab')
+        pyplot.scatter(x, abp, marker='+', color=palette(0), linewidth=1, alpha=0.9,
+                    label='ab+')
+        pyplot.scatter(x, ba, marker='*', color=palette(1), linewidth=1, alpha=0.9,
+                    label='ba')
+        pyplot.scatter(x, bap, marker='+', color=palette(1), linewidth=1, alpha=0.9,
+                    label='ba+')
+        pyplot.legend()
+        pyplot.title("Transfer strength by Layers copied", loc='right', fontsize=12, fontweight=0,
+                     color='orange')
+        pyplot.ylabel("Accuracy")
+        pyplot.xlabel("Layers copied")
+        pyplot.savefig(os.path.join(output_dir, filename), format='png')
