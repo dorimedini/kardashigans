@@ -163,19 +163,20 @@ class AnalyzeModel(object):
         pyplot.style.use('seaborn-darkgrid')
         pyplot.figure()
         palette = pyplot.get_cmap('Set1')
-        pyplot.plot(pruned_robustness, marker='', color=palette(0), linewidth=1, alpha=0.9,
-                    label='Robustness (pruned)')
-        pyplot.plot(unpruned_robustness, marker='', color=palette(1), linewidth=1, alpha=0.9,
-                    label='Robustness (unpruned)')
-        pyplot.plot(winnery_intersection_ratio, marker='', color=palette(2), linewidth=1, alpha=0.9,
-                    label='Winning Ticket Intersection (ratio)')
-        pyplot.plot(l2_diffs, marker='', color=palette(3), linewidth=1, alpha=0.9,
-                    label='L2 norm of weight difference')
-        pyplot.plot(l1_diffs, marker='', color=palette(4), linewidth=1, alpha=0.9,
-                    label='L1 norm of weight difference')
-        pyplot.plot(linf_diffs, marker='', color=palette(5), linewidth=1, alpha=0.9,
-                    label='Linf norm of weight difference')
-        pyplot.legend()
+        column_list = list(range(len(unpruned_robustness)))
+        pyplot.scatter(column_list, pruned_robustness, marker='o', color=palette(0), linewidth=1, alpha=0.9,
+                       label='Robustness (pruned)')
+        pyplot.scatter(column_list, unpruned_robustness, marker='o', color=palette(1), linewidth=1, alpha=0.9,
+                       label='Robustness (unpruned)')
+        pyplot.scatter(column_list, winnery_intersection_ratio, marker='o', color=palette(2), linewidth=1, alpha=0.9,
+                       label='Winning Ticket Intersection (ratio)')
+        pyplot.scatter(column_list, l2_diffs, marker='o', color=palette(3), linewidth=1, alpha=0.9,
+                       label='L2 norm of weight difference')
+        pyplot.scatter(column_list, l1_diffs, marker='o', color=palette(4), linewidth=1, alpha=0.9,
+                       label='L1 norm of weight difference')
+        pyplot.scatter(column_list, linf_diffs, marker='o', color=palette(5), linewidth=1, alpha=0.9,
+                       label='Linf norm of weight difference')
+        pyplot.legend(loc='center left', bbox_to_anchor=(-0.7, 0.5))
         pyplot.title("Robustness & Winning Ticket Intersection by Layer\n(output to {})".format(graph_name),
                      loc='right', fontsize=12, fontweight=0, color='orange')
         pyplot.xlabel("Layer")
