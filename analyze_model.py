@@ -17,26 +17,28 @@ class AnalyzeModel(object):
     """
 
     @staticmethod
-    def _norm_diff_internal(model1, model2, layer, normalize, ord):
-        # get_weights()[0] is the edge weights, get_weights()[1] is the node biases.
-        weights1 = model1.layers[layer].get_weights()[0]
-        weights2 = model2.layers[layer].get_weights()[0]
-        if normalize:
-            weights1 = weights1 / np.linalg.norm(weights1, ord=ord)
-            weights2 = weights2 / np.linalg.norm(weights2, ord=ord)
-        return np.linalg.norm(weights1 - weights2, ord=ord)
-
-    @staticmethod
     def l1_diff(model1, model2, layer, normalize=True):
-        return AnalyzeModel._norm_diff_internal(model1, model2, layer, normalize, ord=1)
+        return AnalyzeModel.get_weight_distances(model1,
+                                                 model2,
+                                                 layer_indices=[layer],
+                                                 norm_orders=[1],
+                                                 normalize=normalize)[layer][0]
 
     @staticmethod
     def l2_diff(model1, model2, layer, normalize=True):
-        return AnalyzeModel._norm_diff_internal(model1, model2, layer, normalize, ord=2)
+        return AnalyzeModel.get_weight_distances(model1,
+                                                 model2,
+                                                 layer_indices=[layer],
+                                                 norm_orders=[2],
+                                                 normalize=normalize)[layer][0]
 
     @staticmethod
     def linf_diff(model1, model2, layer, normalize=True):
-        return AnalyzeModel._norm_diff_internal(model1, model2, layer, normalize, ord=np.inf)
+        return AnalyzeModel.get_weight_distances(model1,
+                                                 model2,
+                                                 layer_indices=[layer],
+                                                 norm_orders=[np.inf],
+                                                 normalize=normalize)[layer][0]
 
     @staticmethod
     def _rernd_layers(model, layers_indices):
@@ -88,7 +90,7 @@ class AnalyzeModel(object):
         return evaluated_metrics[model.metrics_names.index('acc')]
 
     @staticmethod
-    def get_weight_distances(model, source_weights_model, layer_indices=[], norm_orders=[]):
+    def get_weight_distances(model, source_weights_model, layer_indices=[], norm_orders=[], normalize=True):
         """
         Computes distances between the layers of the given model and source model, in the chosen layers.
         Returns a dictionary in format: {idx: [dists (in the same order as the given list of distances)]}.
@@ -101,8 +103,12 @@ class AnalyzeModel(object):
                 source_flatten_weights = np.concatenate([source_w.flatten() for source_w in source_weights])
                 model_flatten_weights = np.concatenate([model_w.flatten() for model_w in model_weights])
                 for order in norm_orders:
+                    weights1 = source_flatten_weights / np.linalg.norm(source_flatten_weights, ord=order) \
+                        if normalize else source_flatten_weights
+                    weights2 = model_flatten_weights / np.linalg.norm(model_flatten_weights, ord=order) \
+                        if normalize else model_flatten_weights
                     distance_list[layer].append(
-                        np.linalg.norm(model_flatten_weights - source_flatten_weights, ord=order))
+                        np.linalg.norm(weights1 - weights2, ord=order))
         return distance_list
 
     @staticmethod
