@@ -43,17 +43,19 @@ class BaseTrainer(Verbose):
             assert prune_threshold > 0, "Only non-negative threshold values allowed! Got {}".format(prune_threshold)
         self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
+        (self._x_train, self._y_train), (self._x_test, self._y_test) = self._dataset.load_data()
         if normalize_data:
-            (self._x_train, self._y_train), (self._x_test, self._y_test) = self._load_data_normalized()
+            (self._x_train, self._y_train), (self._x_test, self._y_test) = self._normalize_data(self._x_train,
+                                                                                                self._y_train,
+                                                                                                self._x_test,
+                                                                                                self._y_test)
             self._shape = (np.prod(self._x_train.shape[1:]),)
         else:
-            (self._x_train, self._y_train), (self._x_test, self._y_test) = self._dataset.load_data()
             self._shape = self._x_train.shape[1:]
         self.logger.debug("Data shape: {}".format(self._shape))
 
-    def _load_data_normalized(self):
-        self.logger.debug("Loading and normalizing data.")
-        (x_train, y_train), (x_test, y_test) = self._dataset.load_data()
+    def _normalize_data(self, x_train, y_train, x_test, y_test):
+        self.logger.debug("normalizing data.")
         self.logger.info("Before reshape:")
         self.logger.info("x_train.shape: {}".format(x_train.shape))
         self.logger.info("x_test.shape: {}".format(x_test.shape))
@@ -149,9 +151,11 @@ class BaseTrainer(Verbose):
         for idx in layers_to_freeze:
             layers[idx].trainable = False
 
-    @staticmethod
-    def set_layers_weights(layers, weight_map):
-        for idx in weight_map:
+    def set_layers_weights(self, layers, weight_map, layers_to_copy=None):
+        if layers_to_copy is None:
+            layers_to_copy = list(weight_map.keys())
+        self.logger.debug("copying layers {}".format(layers_to_copy))
+        for idx in layers_to_copy:
             layers[idx].set_weights(weight_map[idx])
 
 
@@ -169,6 +173,10 @@ class FCTrainer(BaseTrainer):
                  output_activation='softmax',
                  optimizer=optimizers.SGD(momentum=0.9, nesterov=True),
                  loss='sparse_categorical_crossentropy',
+                 kernel_reg=None,
+                 bias_reg=None,
+                 activation_reg=None,
+                 reg_penalty_by_layer=None,
                  metrics=None,
                  **kwargs):
         """
@@ -196,6 +204,9 @@ class FCTrainer(BaseTrainer):
         self._optimizer = optimizer
         self._loss = loss
         self._metrics = metrics if metrics else ['accuracy']
+        self._kernel_reg = None
+        self._bias_reg = None
+        self._activation_reg = None
 
     def _create_layers(self):
         self.logger.debug("Creating {} layers".format(self._n_layers))
@@ -273,10 +284,10 @@ class FCFreezeTrainer(FCTrainer):
     def _train(self):
         layers = self._create_layers()
         self.freeze_layers(layers, self._layers_to_freeze)
-        self.set_layers_weights(layers, self._weight_map)
         connected_layers = self._connect_layers(layers)
         model = Model(layers[0], connected_layers[-1])
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
+        self.set_layers_weights(layers, self._weight_map)
         self.logger.info(model.summary())
         history = model.fit(self._x_train, self._y_train,
                   shuffle=True,

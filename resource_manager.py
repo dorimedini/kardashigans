@@ -112,7 +112,11 @@ class ResourceManager(Verbose):
     def load_model(self, model_name, fullpath=None):
         if not fullpath:
             fullpath = self._get_model_load_fullpath(model_name)
-        return keras.models.load_model(fullpath)
+        try:
+            return keras.models.load_model(fullpath)
+        except IOError:
+            fullpath = self._get_model_save_fullpath(model_name)
+            return keras.models.load_model(fullpath)
 
     def try_load_model(self, model_name):
         """
