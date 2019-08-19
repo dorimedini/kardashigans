@@ -29,19 +29,21 @@ class TransferExperiment(Experiment):
     """
 
     def __init__(self, dataset, trainer_class, trainer_kwargs, n_classes,
-                 split_labels=None, *args, **kwargs):
+                 split_labels=None, model_a_key="a", model_b_key="b", *args, **kwargs):
         if split_labels is None:
             split_labels = sample(list(range(n_classes)), n_classes // 2)
         data_a = SplitDataset(dataset, split_labels)
         data_b = SplitDataset(dataset, [i for i in range(n_classes) if i not in split_labels])
         trainer_a = trainer_class(dataset=data_a, **trainer_kwargs)
         trainer_b = trainer_class(dataset=data_b, **trainer_kwargs)
-        super(TransferExperiment, self).__init__(model_names=["a", "b"],
+        super(TransferExperiment, self).__init__(model_names=[model_a_key, model_b_key],
                                                  trainers={
-                                                     "a": trainer_a,
-                                                     "b": trainer_b
+                                                     model_a_key: trainer_a,
+                                                     model_b_key: trainer_b
                                                  },
                                                  *args, **kwargs)
+        self._model_a_key = model_a_key
+        self._model_b_key = model_b_key
         self._trainer_class = trainer_class
         if "layers_to_freeze" in trainer_kwargs:
             trainer_kwargs.pop("layers_to_freeze")
@@ -70,14 +72,14 @@ class TransferExperiment(Experiment):
         return weights
 
     def go(self, layers_to_copy_set, results_name="transfer_results", base_name="base"):
-        weights_a = self.get_model_weights("a")
-        weights_b = self.get_model_weights("b")
-        x_test_a, y_test_a = self.get_test_data("a")
-        x_test_b, y_test_b = self.get_test_data("b")
+        weights_a = self.get_model_weights(self._model_a_key)
+        weights_b = self.get_model_weights(self._model_b_key)
+        x_test_a, y_test_a = self.get_test_data(self._model_a_key)
+        x_test_b, y_test_b = self.get_test_data(self._model_b_key)
         results = self._resource_manager.get_existing_results(self._name, results_name)
-        if "base" not in results:
-            results = {"base": {"a": self.get_model_acc("a", x_test_a, y_test_a),
-                                "b": self.get_model_acc("b", x_test_b, y_test_b)}}
+        if base_name not in results:
+            results = {base_name: {self._model_a_key: self.get_model_acc(self._model_a_key, x_test_a, y_test_a),
+                                self._model_b_key: self.get_model_acc(self._model_a_key, x_test_b, y_test_b)}}
             self._resource_manager.save_results(results, self._name, results_name)
         for layers_to_copy in layers_to_copy_set:
             if self.create_name_from_list("", layers_to_copy) not in results:

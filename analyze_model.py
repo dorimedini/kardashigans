@@ -147,7 +147,9 @@ class AnalyzeModel(object):
 
     @staticmethod
     def generate_transfer_graph(results: dict, output_dir: str, filename="transfer_fig", base_name="base"):
-        print(results)
+        v = Verbose(name="AnalyzeModel.generate_transfer_graph")
+        for key, val in results.item:
+            v.logger.debug("Layer: {}, results {}".format(key, val))
         pyplot.style.use('seaborn-darkgrid')
         palette = pyplot.get_cmap('Set1')
         base_results = results.pop(base_name)
@@ -175,4 +177,4 @@ class AnalyzeModel(object):
                      color='orange')
         pyplot.ylabel("Accuracy")
         pyplot.xlabel("Layers copied")
-        pyplot.savefig(os.path.join(output_dir, filename), format='png')
+        pyplot.savefig(os.path.join(output_dir, filename + ".png"), format='png')
