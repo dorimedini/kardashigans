@@ -133,11 +133,11 @@ class BaseTrainer(Verbose):
             input_weights = weights[0]  # weights[1] is the list of node biases
             weighted_threshold = threshold * np.linalg.norm(input_weights)
             # The incoming edge weights of node N is incoming_edge_weights[N]
-            new_weights = np.where(np.absolute(input_weights) < weighted_threshold, 0, input_weights)
-            model.layers[i].set_weights([np.array(new_weights), weights[1]])
-            pruned_this_time = new_weights.size - np.count_nonzero(new_weights)
+            pruned_weights = np.where(np.absolute(input_weights) < weighted_threshold, 0, input_weights)
+            model.layers[i].set_weights([np.array(pruned_weights), weights[1]])
+            pruned_this_time = pruned_weights.size - np.count_nonzero(pruned_weights)
             pruned_edges += pruned_this_time
-            percent_this_layer = (pruned_this_time * 100) // new_weights.size
+            percent_this_layer = (pruned_this_time * 100) // pruned_weights.size
             v.logger.debug("Pruned {} edges from layer {} ({}%)".format(pruned_this_time, i, percent_this_layer))
         total_edges = AnalyzeModel.total_edges(model)
         percent = (pruned_edges * 100) // total_edges
