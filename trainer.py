@@ -58,21 +58,10 @@ class BaseTrainer(Verbose):
 
     def _normalize_data(self, x_train, y_train, x_test, y_test):
         self.logger.debug("normalizing data.")
-        self.logger.info("Before reshape:")
-        self.logger.info("x_train.shape: {}".format(x_train.shape))
-        self.logger.info("x_test.shape: {}".format(x_test.shape))
-        self.logger.info("y_train.shape: {}".format(y_train.shape))
-        self.logger.info("y_test.shape: {}".format(y_test.shape))
-        self.logger.info("x_train[0][0][0] is {}".format(x_train[0][0][0]))
-        self.logger.info("x_train.astype('float32')[0][0][0] is {}".format(x_train.astype('float32')[0][0][0]))
         x_train = x_train.astype('float32') / 255.
         x_test = x_test.astype('float32') / 255.
-        self.logger.info("x_train[0][0][0] is now {}".format(x_train[0][0][0]))
         x_train = x_train.reshape((len(x_train), np.prod(x_train.shape[1:])))
         x_test = x_test.reshape((len(x_test), np.prod(x_test.shape[1:])))
-        self.logger.info("After reshape:")
-        self.logger.info("x_train.shape: {}".format(x_train.shape))
-        self.logger.info("x_test.shape: {}".format(x_test.shape))
         return (x_train, y_train), (x_test, y_test)
 
     def _connect_layers(self, layers):
