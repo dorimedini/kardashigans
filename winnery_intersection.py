@@ -49,11 +49,9 @@ class WinneryIntersection(ExperimentWithCheckpoints):
         winnery_intersection_size = []
         winnery_intersection_ratio = []
         for i in trainer.get_weighted_layers_indices():
-            weights = model.layers[i].get_weights()
-            input_weights = weights[0]
             # The winning ticket is the edge set consisting of non-zero weighted edges
-            intersection_size = np.count_nonzero(input_weights)
-            total_weights = input_weights.size
+            intersection_size = AnalyzeModel.total_edges_in_layers(model, [i], count_nonzero_only=True)
+            total_weights = AnalyzeModel.total_edges_in_layers(model, [i])
             winnery_intersection_size.append(intersection_size)
             winnery_intersection_ratio.append(float(intersection_size) / float(total_weights))
         return winnery_intersection_size, winnery_intersection_ratio

@@ -53,11 +53,18 @@ class AnalyzeModel(object):
 
     @staticmethod
     def total_edges(model):
+        return AnalyzeModel.total_edges_in_layers(model, list(range(len(model.layers))))
+
+    @staticmethod
+    def total_edges_in_layers(model, layers=[], count_nonzero_only=False):
         edges = 0
-        for layer in model.layers:
-            weights = layer.get_weights()
+        for layer in layers:
+            weights = model.layers[layer].get_weights()
             if weights:
-                edges += weights[0].size
+                if count_nonzero_only:
+                    edges += np.count_nonzero(weights[0])
+                else:
+                    edges += weights[0].size
         return edges
 
     @staticmethod
