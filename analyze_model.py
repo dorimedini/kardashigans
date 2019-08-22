@@ -212,6 +212,15 @@ class AnalyzeModel(object):
         pyplot.savefig(os.path.join(output_dir, filename), format='png')
 
     @staticmethod
+    def get_pruned_percent(model, layer_list=[]):
+        pruned_percents = []
+        for layer in layer_list:
+            total = AnalyzeModel.total_edges_in_layers(model, [layer])
+            pruned = total - AnalyzeModel.total_edges_in_layers(model, [layer], count_nonzero_only=True)
+            pruned_percents.append(pruned / total)
+        return pruned_percents
+
+    @staticmethod
     def generate_transfer_graph(results: dict, output_dir: str, filename="transfer_fig", base_name="base"):
         v = Verbose(name="AnalyzeModel.generate_transfer_graph")
         for key, val in results.item:
