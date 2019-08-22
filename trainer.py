@@ -120,16 +120,16 @@ class BaseTrainer(Verbose):
         raise NotImplementedError
 
     def _prune(self, model):
-        return BaseTrainer.prune_model(model, self._prune_threshold)
+        return BaseTrainer.prune_model(model, self._prune_threshold, self.get_weighted_layers_indices())
 
     @staticmethod
-    def prune_model(model, threshold):
+    def prune_model(model, threshold, layer_indices):
         if math.isnan(threshold):
             return
         v = Verbose()
         # Layer 0 has no input edges, start from layer 1
         pruned_edges = 0
-        for i in range(1, len(model.layers)):
+        for i in layer_indices:
             weights = model.layers[i].get_weights()
             input_weights = weights[0]  # weights[1] is the list of node biases
             weighted_threshold = threshold * np.linalg.norm(input_weights)
