@@ -104,3 +104,8 @@ class WinneryIntersection(ExperimentWithCheckpoints):
                                                 graph_name=model_name,
                                                 output_dir=self._output_dir,
                                                 filename=model_name + "_robustness_winnery_correlation")
+            AnalyzeModel.generate_pruned_percent_graph(untrained_pruned_percent=untrained_prune_percent[model_name],
+                                                       trained_pruned_percent=trained_prune_percent[model_name],
+                                                       graph_name=model_name,
+                                                       output_dir=self._output_dir,
+                                                       filename=model_name + "_pruned_percent")
