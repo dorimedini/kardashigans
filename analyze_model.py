@@ -221,6 +221,26 @@ class AnalyzeModel(object):
         return pruned_percents
 
     @staticmethod
+    def generate_pruned_percent_graph(untrained_pruned_percent,
+                                      trained_pruned_percent,
+                                      graph_name,
+                                      output_dir,
+                                      filename):
+        pyplot.style.use('seaborn-darkgrid')
+        pyplot.figure()
+        palette = pyplot.get_cmap('Set1')
+        columns = list(range(len(untrained_pruned_percent)))
+        pyplot.scatter(columns, untrained_pruned_percent, marker='o', color=palette(0), linewidth=1, alpha=0.9,
+                       label='Percent pruned (untrained model)')
+        pyplot.scatter(columns, trained_pruned_percent, marker='o', color=palette(1), linewidth=1, alpha=0.9,
+                       label='Percent pruned (trained model)')
+        pyplot.legend(loc='center left', bbox_to_anchor=(-0.7, 0.5))
+        pyplot.title("Percent of edges pruned by layer\n(output to {})".format(graph_name),
+                     loc='right', fontsize=12, fontweight=0, color='orange')
+        pyplot.xlabel("Layer")
+        pyplot.savefig(os.path.join(output_dir, filename), format='png')
+
+    @staticmethod
     def generate_transfer_graph(results: dict, output_dir: str, filename="transfer_fig", base_name="base"):
         v = Verbose(name="AnalyzeModel.generate_transfer_graph")
         for key, val in results.item:
