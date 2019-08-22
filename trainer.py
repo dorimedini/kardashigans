@@ -5,6 +5,7 @@ from keras.models import Model
 from keras.applications import VGG16, VGG19
 import numpy as np
 import math
+from kardashigans.analyze_model import AnalyzeModel
 from kardashigans.verbose import Verbose
 from keras import regularizers
 
@@ -44,17 +45,19 @@ class BaseTrainer(Verbose):
             assert prune_threshold > 0, "Only non-negative threshold values allowed! Got {}".format(prune_threshold)
         self._checkpoint_callbacks = []
         # Load the data at this point to set the shape
+        (self._x_train, self._y_train), (self._x_test, self._y_test) = self._dataset.load_data()
         if normalize_data:
-            (self._x_train, self._y_train), (self._x_test, self._y_test) = self._load_data_normalized()
+            (self._x_train, self._y_train), (self._x_test, self._y_test) = self._normalize_data(self._x_train,
+                                                                                                self._y_train,
+                                                                                                self._x_test,
+                                                                                                self._y_test)
             self._shape = (np.prod(self._x_train.shape[1:]),)
         else:
-            (self._x_train, self._y_train), (self._x_test, self._y_test) = self._dataset.load_data()
             self._shape = self._x_train.shape[1:]
         self.logger.debug("Data shape: {}".format(self._shape))
 
-    def _load_data_normalized(self):
-        self.logger.debug("Loading and normalizing data.")
-        (x_train, y_train), (x_test, y_test) = self._dataset.load_data()
+    def _normalize_data(self, x_train, y_train, x_test, y_test):
+        self.logger.debug("normalizing data.")
         self.logger.info("Before reshape:")
         self.logger.info("x_train.shape: {}".format(x_train.shape))
         self.logger.info("x_test.shape: {}".format(x_test.shape))
@@ -123,17 +126,24 @@ class BaseTrainer(Verbose):
     def prune_trained_model(model, threshold):
         if math.isnan(threshold):
             return
+        v = Verbose()
         # Layer 0 has no input edges, start from layer 1
         pruned_edges = 0
         for i in range(1, len(model.layers)):
             weights = model.layers[i].get_weights()
             input_weights = weights[0]  # weights[1] is the list of node biases
+            weighted_threshold = threshold * np.linalg.norm(input_weights)
             # The incoming edge weights of node N is incoming_edge_weights[N]
-            new_weights = np.where((input_weights < threshold) & (input_weights > -threshold), 0, input_weights)
-            pruned_edges += new_weights.size - np.count_nonzero(new_weights)
-            model.layers[i].set_weights([np.array(new_weights), weights[1]])
-        v = Verbose()
-        v.logger.debug("Pruned {} edges (with threshold {})".format(pruned_edges, threshold))
+            pruned_weights = np.where(np.absolute(input_weights) < weighted_threshold, 0, input_weights)
+            model.layers[i].set_weights([np.array(pruned_weights), weights[1]])
+            pruned_this_time = pruned_weights.size - np.count_nonzero(pruned_weights)
+            pruned_edges += pruned_this_time
+            percent_this_layer = (pruned_this_time * 100) // pruned_weights.size
+            v.logger.debug("Pruned {} edges from layer {} ({}%)".format(pruned_this_time, i, percent_this_layer))
+        total_edges = AnalyzeModel.total_edges(model)
+        percent = (pruned_edges * 100) // total_edges
+        v.logger.debug("Pruned a total of {}/{} edges ({}%) (with threshold {})"
+                       "".format(pruned_edges, total_edges, percent, threshold))
 
     def _post_train(self, model):
         """ Inheriting classes C should call this method in the overridden _post_train """
@@ -150,9 +160,11 @@ class BaseTrainer(Verbose):
         for idx in layers_to_freeze:
             layers[idx].trainable = False
 
-    @staticmethod
-    def set_layers_weights(layers, weight_map):
-        for idx in weight_map:
+    def set_layers_weights(self, layers, weight_map, layers_to_copy=None):
+        if layers_to_copy is None:
+            layers_to_copy = list(weight_map.keys())
+        self.logger.debug("copying layers {}".format(layers_to_copy))
+        for idx in layers_to_copy:
             layers[idx].set_weights(weight_map[idx])
 
 
@@ -170,6 +182,10 @@ class FCTrainer(BaseTrainer):
                  output_activation='softmax',
                  optimizer=optimizers.SGD(momentum=0.9, nesterov=True),
                  loss='sparse_categorical_crossentropy',
+                 kernel_reg=None,
+                 bias_reg=None,
+                 activation_reg=None,
+                 reg_penalty_by_layer=None,
                  metrics=None,
                  regularizer=None,
                  regularizer_penalty=0.0,
@@ -303,10 +319,10 @@ class FCFreezeTrainer(FCTrainer):
     def _train(self):
         layers = self._create_layers()
         self.freeze_layers(layers, self._layers_to_freeze)
-        self.set_layers_weights(layers, self._weight_map)
         connected_layers = self._connect_layers(layers)
         model = Model(layers[0], connected_layers[-1])
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
+        self.set_layers_weights(layers, self._weight_map)
         self.logger.info(model.summary())
         history = model.fit(self._x_train, self._y_train,
                   shuffle=True,

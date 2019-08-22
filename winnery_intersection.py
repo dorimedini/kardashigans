@@ -13,7 +13,7 @@ class WinneryIntersection(ExperimentWithCheckpoints):
     of some trained model, and the number of non-zero weights in layer i of
     the winnery lotter ticket.
     """
-    def __init__(self, prune_threshold, *args, **kwargs):
+    def __init__(self, prune_threshold=0.001, *args, **kwargs):
         assert not math.isnan(prune_threshold) and prune_threshold >= 0, \
             "Must init WinneryIntersection with non-negative float value for pruning threshold"
         self._prune_threshold = prune_threshold
@@ -63,10 +63,19 @@ class WinneryIntersection(ExperimentWithCheckpoints):
         pruned_robustness = {}
         winnery_intersection_size = {}
         winnery_intersection_ratio = {}
+        l2_norm_diff_map = {}
+        l1_norm_diff_map = {}
+        linf_norm_diff_map = {}
         for model_name, trainer in self.get_trainer_map().items():
             test_data = self.get_test_data(model_name)
             with self.open_model(model_name) as trained_model:
                 with self.open_model_at_epoch(model_name, 'start') as untrained_model:
+                    l2_norm_diff_map[model_name] = [AnalyzeModel.l2_diff(trained_model, untrained_model, i)
+                                                    for i in trainer.get_weighted_layers_indices()]
+                    l1_norm_diff_map[model_name] = [AnalyzeModel.l1_diff(trained_model, untrained_model, i)
+                                                    for i in trainer.get_weighted_layers_indices()]
+                    linf_norm_diff_map[model_name] = [AnalyzeModel.linf_diff(trained_model, untrained_model, i)
+                                                      for i in trainer.get_weighted_layers_indices()]
                     unpruned_robustness[model_name] = self._get_robustness_list(trained_model,
                                                                                 untrained_model,
                                                                                 trainer,
@@ -79,9 +88,12 @@ class WinneryIntersection(ExperimentWithCheckpoints):
                 winnery_intersection_size[model_name], winnery_intersection_ratio[model_name] = \
                     self._get_winnery_intersection_size_and_ratio(trained_model, trainer)
         for model_name in self.get_trainer_map().keys():
-            AnalyzeModel.generate_robustness_winnery_correlation_graph(pruned_robustness[model_name],
-                                                                       unpruned_robustness[model_name],
-                                                                       winnery_intersection_ratio[model_name],
-                                                                       self._output_dir,
-                                                                       model_name + "_robustness_winnery_correlation")
-        # TODO: Show winnery_intersection_ratio alongside unpruned / pruned robustness
+            AnalyzeModel.generate_winnery_graph(pruned_robustness=pruned_robustness[model_name],
+                                                unpruned_robustness=unpruned_robustness[model_name],
+                                                winnery_intersection_ratio=winnery_intersection_ratio[model_name],
+                                                l2_diffs=l2_norm_diff_map[model_name],
+                                                l1_diffs=l1_norm_diff_map[model_name],
+                                                linf_diffs=linf_norm_diff_map[model_name],
+                                                graph_name=model_name,
+                                                output_dir=self._output_dir,
+                                                filename=model_name + "_robustness_winnery_correlation")

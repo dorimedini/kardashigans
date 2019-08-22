@@ -17,6 +17,30 @@ class AnalyzeModel(object):
     """
 
     @staticmethod
+    def l1_diff(model1, model2, layer, normalize=True):
+        return AnalyzeModel.get_weight_distances(model1,
+                                                 model2,
+                                                 layer_indices=[layer],
+                                                 norm_orders=[1],
+                                                 normalize=normalize)[layer][0]
+
+    @staticmethod
+    def l2_diff(model1, model2, layer, normalize=True):
+        return AnalyzeModel.get_weight_distances(model1,
+                                                 model2,
+                                                 layer_indices=[layer],
+                                                 norm_orders=[2],
+                                                 normalize=normalize)[layer][0]
+
+    @staticmethod
+    def linf_diff(model1, model2, layer, normalize=True):
+        return AnalyzeModel.get_weight_distances(model1,
+                                                 model2,
+                                                 layer_indices=[layer],
+                                                 norm_orders=[np.inf],
+                                                 normalize=normalize)[layer][0]
+
+    @staticmethod
     def _rernd_layers(model, layers_indices):
         session = K.get_session()
         for idx in layers_indices:
@@ -26,6 +50,15 @@ class AnalyzeModel(object):
                 if hasattr(v_arg, 'initializer'):
                     initializer_method = getattr(v_arg, 'initializer')
                     initializer_method.run(session=session)
+
+    @staticmethod
+    def total_edges(model):
+        edges = 0
+        for layer in model.layers:
+            weights = layer.get_weights()
+            if weights:
+                edges += weights[0].size
+        return edges
 
     @staticmethod
     def calc_robustness(test_data, model, source_weights_model=None, layer_indices=None, batch_size=32):
@@ -66,7 +99,7 @@ class AnalyzeModel(object):
         return evaluated_metrics[model.metrics_names.index('acc')]
 
     @staticmethod
-    def get_weight_distances(model, source_weights_model, layer_indices=[], norm_orders=[]):
+    def get_weight_distances(model, source_weights_model, layer_indices=[], norm_orders=[], normalize=True):
         """
         Computes distances between the layers of the given model and source model, in the chosen layers.
         Returns a dictionary in format: {idx: [dists (in the same order as the given list of distances)]}.
@@ -79,8 +112,12 @@ class AnalyzeModel(object):
                 source_flatten_weights = np.concatenate([source_w.flatten() for source_w in source_weights])
                 model_flatten_weights = np.concatenate([model_w.flatten() for model_w in model_weights])
                 for order in norm_orders:
+                    weights1 = source_flatten_weights / np.linalg.norm(source_flatten_weights, ord=order) \
+                        if normalize else source_flatten_weights
+                    weights2 = model_flatten_weights / np.linalg.norm(model_flatten_weights, ord=order) \
+                        if normalize else model_flatten_weights
                     distance_list[layer].append(
-                        np.linalg.norm(model_flatten_weights - source_flatten_weights, ord=order))
+                        np.linalg.norm(weights1 - weights2, ord=order))
         return distance_list
 
     @staticmethod
@@ -129,18 +166,67 @@ class AnalyzeModel(object):
                                            output_dir=save_results_path)
 
     @staticmethod
-    def generate_robustness_winnery_correlation_graph(pruned_robustness,
-                                                      unpruned_robustness,
-                                                      winnery_intersection_ratio,
-                                                      output_dir,
-                                                      filename):
+    def generate_winnery_graph(pruned_robustness,
+                               unpruned_robustness,
+                               winnery_intersection_ratio,
+                               l2_diffs,
+                               l1_diffs,
+                               linf_diffs,
+                               graph_name,
+                               output_dir,
+                               filename):
         pyplot.style.use('seaborn-darkgrid')
         pyplot.figure()
         palette = pyplot.get_cmap('Set1')
-        pyplot.plot(pruned_robustness, marker='', color=palette(0), linewidth=1, alpha=0.9, label='Robustness (pruned)')
-        pyplot.plot(unpruned_robustness, marker='', color=palette(1), linewidth=1, alpha=0.9, label='Robustness (unpruned)')
-        pyplot.plot(winnery_intersection_ratio, marker='', color=palette(2), linewidth=1, alpha=0.9, label='Winning Ticket Intersection (ratio)')
-        pyplot.legend()
-        pyplot.title("Robustness & Winning Ticket Intersection by Layer", loc='right', fontsize=12, fontweight=0, color='orange')
+        column_list = list(range(len(unpruned_robustness)))
+        pyplot.scatter(column_list, pruned_robustness, marker='o', color=palette(0), linewidth=1, alpha=0.9,
+                       label='Robustness (pruned)')
+        pyplot.scatter(column_list, unpruned_robustness, marker='o', color=palette(1), linewidth=1, alpha=0.9,
+                       label='Robustness (unpruned)')
+        pyplot.scatter(column_list, winnery_intersection_ratio, marker='o', color=palette(2), linewidth=1, alpha=0.9,
+                       label='Winning Ticket Intersection (ratio)')
+        pyplot.scatter(column_list, l2_diffs, marker='o', color=palette(3), linewidth=1, alpha=0.9,
+                       label='L2 norm of weight difference')
+        pyplot.scatter(column_list, l1_diffs, marker='o', color=palette(4), linewidth=1, alpha=0.9,
+                       label='L1 norm of weight difference')
+        pyplot.scatter(column_list, linf_diffs, marker='o', color=palette(5), linewidth=1, alpha=0.9,
+                       label='Linf norm of weight difference')
+        pyplot.legend(loc='center left', bbox_to_anchor=(-0.7, 0.5))
+        pyplot.title("Robustness & Winning Ticket Intersection by Layer\n(output to {})".format(graph_name),
+                     loc='right', fontsize=12, fontweight=0, color='orange')
         pyplot.xlabel("Layer")
         pyplot.savefig(os.path.join(output_dir, filename), format='png')
+
+    @staticmethod
+    def generate_transfer_graph(results: dict, output_dir: str, filename="transfer_fig", base_name="base"):
+        v = Verbose(name="AnalyzeModel.generate_transfer_graph")
+        for key, val in results.item:
+            v.logger.debug("Layer: {}, results {}".format(key, val))
+        pyplot.style.use('seaborn-darkgrid')
+        palette = pyplot.get_cmap('Set1')
+        base_results = results.pop(base_name)
+        ab = [base_results["b"]]
+        abp = [base_results["b"]]
+        ba = [base_results["a"]]
+        bap = [base_results["a"]]
+        for result in results.values():
+            ab.append(result["ab"])
+            abp.append(result["abp"])
+            ba.append(result["ba"])
+            bap.append(result["bap"])
+        x = [base_name] + list(results.keys())
+        pyplot.figure()
+        pyplot.scatter(x, ab, marker='*', color=palette(0), linewidth=1, alpha=0.9,
+                    label='ab')
+        pyplot.scatter(x, abp, marker='+', color=palette(0), linewidth=1, alpha=0.9,
+                    label='ab+')
+        pyplot.scatter(x, ba, marker='*', color=palette(1), linewidth=1, alpha=0.9,
+                    label='ba')
+        pyplot.scatter(x, bap, marker='+', color=palette(1), linewidth=1, alpha=0.9,
+                    label='ba+')
+        pyplot.legend()
+        pyplot.title("Transfer strength by Layers copied", loc='right', fontsize=12, fontweight=0,
+                     color='orange')
+        pyplot.ylabel("Accuracy")
+        pyplot.xlabel("Layers copied")
+        pyplot.savefig(os.path.join(output_dir, filename + ".png"), format='png')
