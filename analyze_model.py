@@ -18,6 +18,19 @@ class AnalyzeModel(object):
     """
 
     @staticmethod
+    def glorot_constant(model, layer_index):
+        # See https://keras.io/initializers/#glorot_uniform
+        total_degree = 0
+        input_weights = model.layers[layer_index].get_weights()
+        if input_weights:
+            total_degree += input_weights[0].size
+        if layer_index + 1 < len(model.layers):
+            output_weights = model.layers[layer_index + 1].get_weights()
+            if output_weights:
+                total_degree += output_weights[0].size
+        return np.sqrt(6 / total_degree)
+
+    @staticmethod
     def l1_diff(model1, model2, layer, normalize=True):
         return AnalyzeModel.get_weight_distances(model1,
                                                  model2,
