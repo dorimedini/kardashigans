@@ -1,12 +1,13 @@
 # Save / load / train models.
 from keras import optimizers
-from keras.layers import Input, Dense
+from keras.layers import Input, Dense, Dropout
 from keras.models import Model
 from keras.applications import VGG16, VGG19
 import numpy as np
 import math
 from kardashigans.analyze_model import AnalyzeModel
 from kardashigans.verbose import Verbose
+from keras import regularizers
 
 
 class BaseTrainer(Verbose):
@@ -186,6 +187,9 @@ class FCTrainer(BaseTrainer):
                  activation_reg=None,
                  reg_penalty_by_layer=None,
                  metrics=None,
+                 regularizer=None,
+                 regularizer_penalty=0.0,
+                 drop_out_ratio=0.0,
                  **kwargs):
         """
         :param dataset: keras.datasets.mnist, for example
@@ -212,9 +216,18 @@ class FCTrainer(BaseTrainer):
         self._optimizer = optimizer
         self._loss = loss
         self._metrics = metrics if metrics else ['accuracy']
-        self._kernel_reg = None
-        self._bias_reg = None
-        self._activation_reg = None
+        self._regularizer = self._get_regularizer(regularizer, regularizer_penalty)
+        self._do = drop_out_ratio
+
+    def _get_regularizer(self, name, penalty):
+        self.logger.debug("regularizer is {}".format(name))
+        regularize_dict = {
+            "l1": regularizers.l1(penalty),
+            "l2": regularizers.l2(penalty),
+            "l1_l2": regularizers.l1_l2(l1=penalty, l2=penalty),
+            None: None
+        }
+        return regularize_dict[name]
 
     def _create_layers(self):
         self.logger.debug("Creating {} layers".format(self._n_layers))
@@ -223,16 +236,29 @@ class FCTrainer(BaseTrainer):
         input_layer = Input(shape=self._shape)
         layers = [input_layer]
         # Now the rest of the scum:
+        self.logger.debug("Using drop out with ratio={}".format(self._do))
         for i in range(self._n_layers):
-            layer = Dense(self._n_neurons, activation=self._activation)
+            if self._regularizer:
+                layer = Dense(self._n_neurons, activation=self._activation, kernel_regularizer=self._regularizer)
+            else:
+                layer = Dense(self._n_neurons, activation=self._activation)
             layers += [layer]
-        output_layer = Dense(self._n_classes, activation=self._output_activation)
+            if self._do:
+                do_layer = Dropout(rate=self._do)
+                layers += [do_layer]
+        if self._regularizer:
+            output_layer = Dense(self._n_classes, activation=self._output_activation, kernel_regularizer=self._regularizer)
+        else:
+            output_layer = Dense(self._n_classes, activation=self._output_activation)
         layers += [output_layer]
         self.logger.debug("Done, returning layer list of length {}".format(len(layers)))
         return layers
 
     def get_weighted_layers_indices(self):
-        return list(range(1, self.get_n_layers() + 2))
+        if self._do:
+            return range(1, 2 * self.get_n_layers() + 2, 2)
+        else:
+            return range(1, self.get_n_layers() + 2)
 
     # Given a dataset, constructs a model with the requested parameters
     # and runs it. Also, optionally uses specified
@@ -286,7 +312,8 @@ class FCFreezeTrainer(FCTrainer):
             with frozen layers.
         """
         super().__init__(**kwargs)
-        self._layers_to_freeze = layers_to_freeze if layers_to_freeze else []
+        weighted_layers = self.get_weighted_layers_indices()
+        self._layers_to_freeze = [weighted_layers[i] for i in layers_to_freeze] if layers_to_freeze else []
         self._weight_map = weight_map if weight_map else {}
 
     def _train(self):
