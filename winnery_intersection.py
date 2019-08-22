@@ -13,7 +13,7 @@ class WinneryIntersection(ExperimentWithCheckpoints):
     of some trained model, and the number of non-zero weights in layer i of
     the winnery lotter ticket.
     """
-    def __init__(self, prune_threshold=0.001, *args, **kwargs):
+    def __init__(self, prune_threshold=6, *args, **kwargs):
         assert not math.isnan(prune_threshold) and prune_threshold >= 0, \
             "Must init WinneryIntersection with non-negative float value for pruning threshold"
         self._prune_threshold = prune_threshold
