@@ -78,7 +78,7 @@ class WinneryIntersection(ExperimentWithCheckpoints):
                                                                                 untrained_model,
                                                                                 trainer,
                                                                                 test_data)
-                    BaseTrainer.prune_trained_model(trained_model, self._prune_threshold)
+                    BaseTrainer.prune_model(trained_model, self._prune_threshold)
                     pruned_robustness[model_name] = self._get_robustness_list(trained_model,
                                                                               untrained_model,
                                                                               trainer,

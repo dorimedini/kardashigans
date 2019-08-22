@@ -120,10 +120,10 @@ class BaseTrainer(Verbose):
         raise NotImplementedError
 
     def _prune(self, model):
-        return BaseTrainer.prune_trained_model(model, self._prune_threshold)
+        return BaseTrainer.prune_model(model, self._prune_threshold)
 
     @staticmethod
-    def prune_trained_model(model, threshold):
+    def prune_model(model, threshold):
         if math.isnan(threshold):
             return
         v = Verbose()
