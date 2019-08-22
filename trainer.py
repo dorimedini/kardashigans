@@ -1,7 +1,7 @@
 # Save / load / train models.
 from keras import optimizers
 from keras.layers import Input, Dense, Dropout
-from keras.models import Model
+from keras.models import Model, clone_model
 from keras.applications import VGG16, VGG19
 import numpy as np
 import math
@@ -133,6 +133,12 @@ class BaseTrainer(Verbose):
         percent = (pruned_edges * 100) // total_edges
         v.logger.debug("Pruned a total of {}/{} edges ({}%) (with threshold {})"
                        "".format(pruned_edges, total_edges, percent, threshold))
+
+    @staticmethod
+    def prune_model_copy(model, threshold, layer_indices):
+        model_copy = clone_model(model)
+        BaseTrainer.prune_model(model_copy, threshold, layer_indices)
+        return model_copy
 
     def _post_train(self, model):
         """ Inheriting classes C should call this method in the overridden _post_train """

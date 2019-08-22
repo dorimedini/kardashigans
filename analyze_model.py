@@ -1,3 +1,4 @@
+import keras
 import numpy as np
 import collections
 import matplotlib.pylab as plt
