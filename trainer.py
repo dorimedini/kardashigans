@@ -129,12 +129,14 @@ class BaseTrainer(Verbose):
         v = Verbose()
         # Layer 0 has no input edges, start from layer 1
         pruned_edges = 0
+        all_pruned_weights = []
         for i in range(1, len(model.layers)):
             weights = model.layers[i].get_weights()
             input_weights = weights[0]  # weights[1] is the list of node biases
             weighted_threshold = threshold * np.linalg.norm(input_weights)
             # The incoming edge weights of node N is incoming_edge_weights[N]
             pruned_weights = np.where(np.absolute(input_weights) < weighted_threshold, 0, input_weights)
+            all_pruned_weights.append(pruned_weights)
             model.layers[i].set_weights([np.array(pruned_weights), weights[1]])
             pruned_this_time = pruned_weights.size - np.count_nonzero(pruned_weights)
             pruned_edges += pruned_this_time
@@ -144,6 +146,7 @@ class BaseTrainer(Verbose):
         percent = (pruned_edges * 100) // total_edges
         v.logger.debug("Pruned a total of {}/{} edges ({}%) (with threshold {})"
                        "".format(pruned_edges, total_edges, percent, threshold))
+        return all_pruned_weights
 
     def _post_train(self, model):
         """ Inheriting classes C should call this method in the overridden _post_train """
