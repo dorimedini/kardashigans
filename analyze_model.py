@@ -135,7 +135,12 @@ class AnalyzeModel(object):
         v.logger.debug("Generating heatmap. Data: {}".format(data))
         v.logger.debug("Rows: {}".format(row_labels))
         v.logger.debug("Cols: {}".format(col_labels))
-        ax = sns.heatmap(data, linewidth=0.5, xticklabels=col_labels, yticklabels=row_labels)
+        ax = sns.heatmap(data,
+                         linewidth=0.5,
+                         xticklabels=col_labels,
+                         yticklabels=row_labels,
+                         vmin=0,
+                         vmax=1)
         fig = ax.get_figure()
         fig.savefig(output_dir + filename)
         plt.show()
