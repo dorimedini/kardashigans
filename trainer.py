@@ -274,16 +274,9 @@ class FCTrainer(BaseTrainer):
             return range(1, self.get_n_layers() + 2)
 
     def _is_drawn_glorot_uniform(self, layer_index):
-        # All weighted layers are Dense. If regularizer is provided and not
+        # All weighted layers are Dense. If initializer is provided and not
         # 'glorot_uniform' then it's not glorot, but by default it is
-        if not (layer_index in self.get_weighted_layers_indices()):
-            self.logger.debug("Layer {} not weighted".format(layer_index))
-            return False
-        ret = (not self._regularizer) or self._regularizer == 'glorot_uniform'
-        self.logger.debug("Layer {} is {}glorot".format(layer_index, "" if ret else "not "))
-        if not ret:
-            self.logger.debug("Regularizer is {}".format(self._regularizer))
-        return ret
+        return layer_index in self.get_weighted_layers_indices()
 
     # Given a dataset, constructs a model with the requested parameters
     # and runs it. Also, optionally uses specified
