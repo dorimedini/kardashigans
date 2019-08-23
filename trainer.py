@@ -118,10 +118,13 @@ class BaseTrainer(Verbose):
         raise NotImplementedError
 
     def _prune(self, model):
-        return BaseTrainer.prune_model(model, self._prune_threshold, self.get_weighted_layers_indices())
+        return BaseTrainer.prune_model(model,
+                                       self._prune_threshold,
+                                       self.get_weighted_layers_indices(),
+                                       self.glorot_layer_indices())
 
     @staticmethod
-    def prune_model(model, threshold, layer_indices, assume_glorot=True):
+    def prune_model(model, threshold, layer_indices, glorot_layer_indices=[]):
         if math.isnan(threshold):
             return
         v = Verbose()
@@ -133,7 +136,7 @@ class BaseTrainer(Verbose):
             weighted_threshold = threshold
             # If weights were sampled using the glorot_uniform option we should probably normalize the threshold by the
             # interval constant
-            if assume_glorot:
+            if i in glorot_layer_indices:
                 weighted_threshold *= AnalyzeModel.glorot_constant(model, i)
             else:
                 weighted_threshold *= np.linalg.norm(input_weights)
@@ -150,9 +153,9 @@ class BaseTrainer(Verbose):
                        "".format(pruned_edges, total_edges, percent, threshold))
 
     @staticmethod
-    def prune_model_copy(model, threshold, layer_indices, assume_glorot=True):
+    def prune_model_copy(model, threshold, layer_indices, glorot_layer_indices=[]):
         model_copy = clone_model(model)
-        BaseTrainer.prune_model(model_copy, threshold, layer_indices, assume_glorot=assume_glorot)
+        BaseTrainer.prune_model(model_copy, threshold, layer_indices, glorot_layer_indices=glorot_layer_indices)
         return model_copy
 
     def _post_train(self, model):
