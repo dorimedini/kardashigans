@@ -105,6 +105,15 @@ class BaseTrainer(Verbose):
     def add_checkpoint_callback(self, callback):
         self._checkpoint_callbacks.append(callback)
 
+    def glorot_layer_indices(self):
+        x = list(filter(lambda i: self._is_drawn_glorot_uniform(i), self.get_weighted_layers_indices()))
+        self.logger.debug("Glorot layer indices: {}".format(x))
+        return x
+
+    def _is_drawn_glorot_uniform(self, layer_index):
+        # Dense layers should probably return true (see https://keras.io/initializers/#glorot_uniform)
+        raise NotImplementedError
+
     def _train(self):
         raise NotImplementedError
 
@@ -261,6 +270,18 @@ class FCTrainer(BaseTrainer):
         else:
             return range(1, self.get_n_layers() + 2)
 
+    def _is_drawn_glorot_uniform(self, layer_index):
+        # All weighted layers are Dense. If regularizer is provided and not
+        # 'glorot_uniform' then it's not glorot, but by default it is
+        if not (layer_index in self.get_weighted_layers_indices()):
+            self.logger.debug("Layer {} not weighted".format(layer_index))
+            return False
+        ret = (not self._regularizer) or self._regularizer == 'glorot_uniform'
+        self.logger.debug("Layer {} is {}glorot".format(layer_index, "" if ret else "not "))
+        if not ret:
+            self.logger.debug("Regularizer is {}".format(self._regularizer))
+        return ret
+
     # Given a dataset, constructs a model with the requested parameters
     # and runs it. Also, optionally uses specified
     # weights.
@@ -399,6 +420,9 @@ class VGGTrainer(BaseTrainer):
         except KeyError:
             raise ValueError("VGG size not supported")
         return vgg(weights=self._imagenet_weights, classes=self._n_classes, input_tensor=input_layer)
+
+    def _is_drawn_glorot_uniform(self, layer_index):
+        return False
 
     def _train(self):
         model = self.create_model()
