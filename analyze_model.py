@@ -140,7 +140,8 @@ class AnalyzeModel(object):
                          xticklabels=col_labels,
                          yticklabels=row_labels,
                          vmin=0,
-                         vmax=1)
+                         vmax=1,
+                         cmap='afmhot')
         ax.set_title(graph_name if graph_name else filename)
         fig = ax.get_figure()
         fig.savefig(output_dir + filename)
