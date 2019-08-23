@@ -121,7 +121,7 @@ class AnalyzeModel(object):
         return distance_list
 
     @staticmethod
-    def generate_heatmap(data, row_labels, col_labels, filename, output_dir):
+    def generate_heatmap(data, row_labels, col_labels, filename, output_dir, graph_name=None):
         """
         Creates a heatmap image from the data, outputs to file.
 
@@ -141,6 +141,7 @@ class AnalyzeModel(object):
                          yticklabels=row_labels,
                          vmin=0,
                          vmax=1)
+        ax.set_title(graph_name if graph_name else filename)
         fig = ax.get_figure()
         fig.savefig(output_dir + filename)
         plt.show()
