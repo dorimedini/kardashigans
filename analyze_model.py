@@ -19,16 +19,11 @@ class AnalyzeModel(object):
 
     @staticmethod
     def glorot_constant(model, layer_index):
-        # See https://keras.io/initializers/#glorot_uniform
-        total_degree = 0
-        input_weights = model.layers[layer_index].get_weights()
-        if input_weights:
-            total_degree += input_weights[0].size
-        if layer_index + 1 < len(model.layers):
-            output_weights = model.layers[layer_index + 1].get_weights()
-            if output_weights:
-                total_degree += output_weights[0].size
-        return np.sqrt(6 / total_degree)
+        # See https://keras.io/initializers/#glorot_uniform.
+        # For computation of fanin+fanout see http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf (page 5/8)
+        layer = model.layers[layer_index]
+        in_out = layer.input_shape[1] + layer.output_shape[1]
+        return np.sqrt(6 / in_out)
 
     @staticmethod
     def l1_diff(model1, model2, layer, normalize=True):
