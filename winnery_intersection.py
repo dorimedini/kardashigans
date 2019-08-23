@@ -69,6 +69,7 @@ class WinneryIntersection(ExperimentWithCheckpoints):
         for model_name, trainer in self.get_trainer_map().items():
             test_data = self.get_test_data(model_name)
             layer_indices = trainer.get_weighted_layers_indices()
+            glorot_indices = trainer.glorot_layer_indices()
             with self.open_model(model_name) as trained_model:
                 with self.open_model_at_epoch(model_name, 'start') as untrained_model:
                     l2_norm_diff_map[model_name] = [AnalyzeModel.l2_diff(trained_model, untrained_model, i)
@@ -82,7 +83,10 @@ class WinneryIntersection(ExperimentWithCheckpoints):
                                                                                 trainer,
                                                                                 test_data)
                     # Prune the trained model (before winnery intersection calculations)
-                    BaseTrainer.prune_model(trained_model, self._prune_threshold, layer_indices)
+                    BaseTrainer.prune_model(trained_model,
+                                            self._prune_threshold,
+                                            layer_indices,
+                                            glorot_indices)
                     pruned_robustness[model_name] = self._get_robustness_list(trained_model,
                                                                               untrained_model,
                                                                               trainer,
@@ -92,7 +96,10 @@ class WinneryIntersection(ExperimentWithCheckpoints):
                     winnery_intersection_size[model_name], winnery_intersection_ratio[model_name] = \
                         self._get_winnery_intersection_size_and_ratio(trained_model, trainer)
                     # For untrained prune percent we need to prune the untrained model
-                    BaseTrainer.prune_model(untrained_model, self._prune_threshold, layer_indices)
+                    BaseTrainer.prune_model(untrained_model,
+                                            self._prune_threshold,
+                                            layer_indices,
+                                            glorot_indices)
                     untrained_prune_percent[model_name] = \
                         AnalyzeModel.get_pruned_percent(untrained_model, trainer.get_weighted_layers_indices())
         for model_name in self.get_trainer_map().keys():
