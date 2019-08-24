@@ -99,7 +99,6 @@ class AnalyzeModel(object):
         """
         if not layer_indices:
             layer_indices = []
-        x_test, y_test = test_data
         prev_weights = model.get_weights()
         if source_weights_model:
             for idx in layer_indices:
@@ -110,8 +109,14 @@ class AnalyzeModel(object):
                 model.layers[idx].set_weights(loaded_weights)
         else:
             AnalyzeModel._rernd_layers(model, layer_indices)
-        evaluated_metrics = model.evaluate(x_test, y_test, batch_size=batch_size)
+        accuracy = AnalyzeModel.get_accuracy(test_data, model, batch_size=batch_size)
         model.set_weights(prev_weights)
+        return accuracy
+
+    @staticmethod
+    def get_accuracy(test_data, model, batch_size=32):
+        x_test, y_test = test_data
+        evaluated_metrics = model.evaluate(x_test, y_test, batch_size=batch_size)
         return evaluated_metrics[model.metrics_names.index('acc')]
 
     @staticmethod
