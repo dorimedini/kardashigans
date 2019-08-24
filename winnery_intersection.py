@@ -57,6 +57,8 @@ class WinneryIntersection(ExperimentWithCheckpoints):
         return winnery_intersection_size, winnery_intersection_ratio
 
     def go(self):
+        pruned_acc = {}
+        unpruned_acc = {}
         unpruned_robustness = {}
         pruned_robustness = {}
         winnery_intersection_size = {}
@@ -72,6 +74,9 @@ class WinneryIntersection(ExperimentWithCheckpoints):
             glorot_indices = trainer.glorot_layer_indices()
             with self.open_model(model_name) as trained_model:
                 with self.open_model_at_epoch(model_name, 'start') as untrained_model:
+                    unpruned_acc[model_name] = AnalyzeModel.get_accuracy(test_data,
+                                                                         trained_model,
+                                                                         trainer.get_batch_size())
                     l2_norm_diff_map[model_name] = [AnalyzeModel.l2_diff(trained_model, untrained_model, i)
                                                     for i in layer_indices]
                     l1_norm_diff_map[model_name] = [AnalyzeModel.l1_diff(trained_model, untrained_model, i)
@@ -87,6 +92,9 @@ class WinneryIntersection(ExperimentWithCheckpoints):
                                             self._prune_threshold,
                                             layer_indices,
                                             glorot_indices)
+                    pruned_acc[model_name] = AnalyzeModel.get_accuracy(test_data,
+                                                                       trained_model,
+                                                                       trainer.get_batch_size())
                     pruned_robustness[model_name] = self._get_robustness_list(trained_model,
                                                                               untrained_model,
                                                                               trainer,
@@ -109,6 +117,8 @@ class WinneryIntersection(ExperimentWithCheckpoints):
                                                 l2_diffs=l2_norm_diff_map[model_name],
                                                 l1_diffs=l1_norm_diff_map[model_name],
                                                 linf_diffs=linf_norm_diff_map[model_name],
+                                                pruned_acc=pruned_acc[model_name],
+                                                unpruned_acc=unpruned_acc[model_name],
                                                 graph_name=model_name,
                                                 output_dir=self._output_dir,
                                                 filename=model_name + "_robustness_winnery_correlation")

@@ -200,6 +200,8 @@ class AnalyzeModel(object):
                                l2_diffs,
                                l1_diffs,
                                linf_diffs,
+                               pruned_acc,
+                               unpruned_acc,
                                graph_name,
                                output_dir,
                                filename):
@@ -223,6 +225,7 @@ class AnalyzeModel(object):
         pyplot.title("Robustness & Winning Ticket Intersection by Layer\n(output to {})".format(graph_name),
                      loc='right', fontsize=12, fontweight=0, color='orange')
         pyplot.xlabel("Layer")
+        pyplot.figtext(-0.15, 0.1, "Pruned acc: {}\nUnpruned acc: {}".format(pruned_acc, unpruned_acc))
         pyplot.savefig(os.path.join(output_dir, filename), format='png')
 
     @staticmethod
