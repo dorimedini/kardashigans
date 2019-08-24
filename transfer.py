@@ -1,6 +1,8 @@
 from kardashigans.analyze_model import AnalyzeModel
 from kardashigans.experiment import Experiment
+from kardashigans.trainer import BaseTrainer
 from random import sample
+from keras.callbacks import EarlyStopping
 
 
 class SplitDataset:
@@ -28,15 +30,15 @@ class TransferExperiment(Experiment):
     supports only trainers with "layers_to_freeze" and "weight_map" arguments
     """
 
-    def __init__(self, dataset, trainer_class, trainer_kwargs, n_classes,
-                 split_labels=None, model_a_key="a", model_b_key="b", *args, **kwargs):
+    def __init__(self, dataset, trainer_class: BaseTrainer, trainer_kwargs, n_classes,
+                 split_labels=None, model_a_key="a", model_b_key="b", early_patience=None, *args, **kwargs):
         if split_labels is None:
             split_labels = sample(list(range(n_classes)), n_classes // 2)
         data_a = SplitDataset(dataset, split_labels)
         data_b = SplitDataset(dataset, [i for i in range(n_classes) if i not in split_labels])
         trainer_a = trainer_class(dataset=data_a, **trainer_kwargs)
         trainer_b = trainer_class(dataset=data_b, **trainer_kwargs)
-        super(TransferExperiment, self).__init__(model_names=[model_a_key, model_b_key],
+        super().__init__(model_names=[model_a_key, model_b_key],
                                                  trainers={
                                                      model_a_key: trainer_a,
                                                      model_b_key: trainer_b
@@ -52,6 +54,9 @@ class TransferExperiment(Experiment):
         self._trainer_kwargs = trainer_kwargs
         self._data_a = data_a
         self._data_b = data_b
+        self._early_patience = early_patience
+        for trainer in self._trainers.values():
+            self.add_early_stopping_cb(trainer, early_patience)
 
     @staticmethod
     def create_name_from_list(base, layers_to_copy):
@@ -70,6 +75,13 @@ class TransferExperiment(Experiment):
         with self.open_model(model_name) as model:
             weights = {i: model.layers[i].get_weights() for i in self._trainers[model_name].get_weighted_layers_indices()}
         return weights
+
+    @staticmethod
+    def add_early_stopping_cb(trainer: BaseTrainer, patience=None):
+        patience = patience if patience else trainer.get_epochs()
+        cb = EarlyStopping(monitor='val_acc', patience=patience, restore_best_weights=True)
+        trainer.add_callback(cb)
+        return
 
     def go(self, layers_to_copy_set, results_name="transfer_results", base_name="base"):
         weights_a = self.get_model_weights(self._model_a_key)
@@ -101,6 +113,8 @@ class TransferExperiment(Experiment):
                                  ba_name: ba_trainer,
                                  abp_name: abp_trainer,
                                  bap_name: bap_trainer}
+                for trainer in curr_trainers.values():
+                    self.add_early_stopping_cb(trainer, self._early_patience)
                 model_names = list(curr_trainers.keys())
                 self._model_names.extend(model_names)
                 self._trainers.update(curr_trainers)
