@@ -173,7 +173,7 @@ class ExperimentWithCheckpoints(Experiment):
     def _add_epoch_checkpoint_callback(self, period):
         for name in self._model_names:
             cb = self._resource_manager.get_epoch_save_callback(name, period)
-            self._trainers[name].add_checkpoint_callback(cb)
+            self._trainers[name].add_callback(cb)
 
     def _get_model_at_epoch(self, model_name, epoch):
         """

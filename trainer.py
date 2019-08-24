@@ -43,7 +43,7 @@ class BaseTrainer(Verbose):
         self._prune_threshold = prune_threshold
         if not math.isnan(prune_threshold):
             assert prune_threshold > 0, "Only non-negative threshold values allowed! Got {}".format(prune_threshold)
-        self._checkpoint_callbacks = []
+        self._callbacks = []
         # Load the data at this point to set the shape
         (self._x_train, self._y_train), (self._x_test, self._y_test) = self._dataset.load_data()
         if normalize_data:
@@ -102,8 +102,8 @@ class BaseTrainer(Verbose):
     def get_prune_threshold(self):
         return self._prune_threshold
 
-    def add_checkpoint_callback(self, callback):
-        self._checkpoint_callbacks.append(callback)
+    def add_callback(self, callback):
+        self._callbacks.append(callback)
 
     def glorot_layer_indices(self):
         x = list(filter(lambda i: self._is_drawn_glorot_uniform(i), self.get_weighted_layers_indices()))
@@ -305,11 +305,11 @@ class FCTrainer(BaseTrainer):
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
         self.logger.info(model.summary())
         history = model.fit(self._x_train, self._y_train,
-                  shuffle=True,
-                  epochs=self._epochs,
-                  callbacks=self._checkpoint_callbacks,
-                  batch_size=self._batch_size,
-                  validation_data=(self._x_test, self._y_test))
+                            shuffle=True,
+                            epochs=self._epochs,
+                            callbacks=self._callbacks,
+                            batch_size=self._batch_size,
+                            validation_data=(self._x_test, self._y_test))
         return model, history.history
 
 
@@ -343,11 +343,11 @@ class FCFreezeTrainer(FCTrainer):
         self.set_layers_weights(layers, self._weight_map)
         self.logger.info(model.summary())
         history = model.fit(self._x_train, self._y_train,
-                  shuffle=True,
-                  epochs=self._epochs,
-                  callbacks=self._checkpoint_callbacks,
-                  batch_size=self._batch_size,
-                  validation_data=(self._x_test, self._y_test))
+                            shuffle=True,
+                            epochs=self._epochs,
+                            callbacks=self._callbacks,
+                            batch_size=self._batch_size,
+                            validation_data=(self._x_test, self._y_test))
         return model, history.history
 
 
@@ -427,11 +427,11 @@ class VGGTrainer(BaseTrainer):
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
         self.logger.info(model.summary())
         history = model.fit(self._x_train, self._y_train,
-                  shuffle=True,
-                  epochs=self._epochs,
-                  callbacks=self._checkpoint_callbacks,
-                  batch_size=self._batch_size,
-                  validation_data=(self._x_test, self._y_test))
+                            shuffle=True,
+                            epochs=self._epochs,
+                            callbacks=self._callbacks,
+                            batch_size=self._batch_size,
+                            validation_data=(self._x_test, self._y_test))
         return model, history.history
 
     @staticmethod

@@ -146,7 +146,7 @@ class ResourceManager(Verbose):
         """
         Loads saved models at specific epochs. Intended for use with
         get_epoch_save_callback (used by Experiment objects via the
-        Trainer's add_checkpoint_callback method).
+        Trainer's add_callback method).
 
         Will attempt to load start / end models and a model for each
         epoch given in the period parameter, will print error if
