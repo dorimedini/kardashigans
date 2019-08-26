@@ -173,12 +173,11 @@ class BaseTrainer(Verbose):
         for idx in layers_to_freeze:
             layers[idx].trainable = False
 
-    def set_layers_weights(self, layers, weight_map, layers_to_copy=None):
-        if layers_to_copy is None:
-            layers_to_copy = list(weight_map.keys())
+    def set_layers_weights(self, layers, weight_map):
+        layers_to_copy = list(weight_map.keys())
         self.logger.debug("copying layers {}".format(layers_to_copy))
-        for idx in layers_to_copy:
-            layers[idx].set_weights(weight_map[idx])
+        for idx, weights in weight_map.items():
+            layers[idx].set_weights(weights)
 
 
 class FCTrainer(BaseTrainer):
@@ -245,7 +244,8 @@ class FCTrainer(BaseTrainer):
         input_layer = Input(shape=self._shape)
         layers = [input_layer]
         # Now the rest of the scum:
-        self.logger.debug("Using drop out with ratio={}".format(self._do))
+        if self._do:
+            self.logger.debug("Using drop out with ratio={}".format(self._do))
         for i in range(self._n_layers):
             if self._regularizer:
                 layer = Dense(self._n_neurons, activation=self._activation, kernel_regularizer=self._regularizer)
@@ -316,7 +316,7 @@ class FCFreezeTrainer(FCTrainer):
         freezing and weight initialization.
     """
 
-    def __init__(self, layers_to_freeze=None, weight_map=None, **kwargs):
+    def __init__(self, layers_to_freeze=None, weight_map=None, layers_to_copy=None, **kwargs):
         """
         :param layers_to_freeze: Optional list of layer indexes to set to
             'untrainable', i.e. their weights cannot change during
@@ -324,11 +324,15 @@ class FCFreezeTrainer(FCTrainer):
         :param weight_map: Optional. Maps layer indexes to initial weight
             values to use (instead of random init). Intended for use
             with frozen layers.
+        :param layers_to_copy: Optional list of layer indexes to copy from weight map
         """
         super().__init__(**kwargs)
         weighted_layers = self.get_weighted_layers_indices()
         self._layers_to_freeze = [weighted_layers[i] for i in layers_to_freeze] if layers_to_freeze else []
         self._weight_map = weight_map if weight_map else {}
+        if layers_to_copy and weight_map:
+            layers_to_copy = [weighted_layers[i] for i in layers_to_copy]
+            self._weight_map = {idx: weight_map[idx] for idx in layers_to_copy}
 
     def _train(self):
         layers = self._create_layers()
