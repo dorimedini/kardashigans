@@ -1,6 +1,8 @@
 from kardashigans.analyze_model import AnalyzeModel
 from kardashigans.experiment import Experiment
+from kardashigans.trainer import BaseTrainer
 from random import sample
+from keras.callbacks import EarlyStopping
 
 
 class SplitDataset:
@@ -28,15 +30,15 @@ class TransferExperiment(Experiment):
     supports only trainers with "layers_to_freeze" and "weight_map" arguments
     """
 
-    def __init__(self, dataset, trainer_class, trainer_kwargs, n_classes,
-                 split_labels=None, model_a_key="a", model_b_key="b", *args, **kwargs):
+    def __init__(self, dataset, trainer_class: BaseTrainer, trainer_kwargs, n_classes,
+                 split_labels=None, model_a_key="a", model_b_key="b", early_patience=None, continue_freezing=False, *args, **kwargs):
         if split_labels is None:
             split_labels = sample(list(range(n_classes)), n_classes // 2)
         data_a = SplitDataset(dataset, split_labels)
         data_b = SplitDataset(dataset, [i for i in range(n_classes) if i not in split_labels])
         trainer_a = trainer_class(dataset=data_a, **trainer_kwargs)
         trainer_b = trainer_class(dataset=data_b, **trainer_kwargs)
-        super(TransferExperiment, self).__init__(model_names=[model_a_key, model_b_key],
+        super().__init__(model_names=[model_a_key, model_b_key],
                                                  trainers={
                                                      model_a_key: trainer_a,
                                                      model_b_key: trainer_b
@@ -46,12 +48,19 @@ class TransferExperiment(Experiment):
         self._model_b_key = model_b_key
         self._trainer_class = trainer_class
         if "layers_to_freeze" in trainer_kwargs:
-            trainer_kwargs.pop("layers_to_freeze")
+            layers = trainer_kwargs.pop("layers_to_freeze")
+            if continue_freezing:
+                self._layers_to_freeze = layers
+            else:
+                self._layers_to_freeze = []
         if "weight_map" in trainer_kwargs:
             trainer_kwargs.pop("weight_map")
         self._trainer_kwargs = trainer_kwargs
         self._data_a = data_a
         self._data_b = data_b
+        self._early_patience = early_patience
+        for trainer in self._trainers.values():
+            self.add_early_stopping_cb(trainer, early_patience)
 
     @staticmethod
     def create_name_from_list(base, layers_to_copy):
@@ -71,6 +80,13 @@ class TransferExperiment(Experiment):
             weights = {i: model.layers[i].get_weights() for i in self._trainers[model_name].get_weighted_layers_indices()}
         return weights
 
+    @staticmethod
+    def add_early_stopping_cb(trainer: BaseTrainer, patience=None):
+        patience = patience if patience else trainer.get_epochs()
+        cb = EarlyStopping(monitor='val_acc', patience=patience, verbose=1, restore_best_weights=True)
+        trainer.add_callback(cb)
+        return
+
     def go(self, layers_to_copy_set, results_name="transfer_results", base_name="base"):
         weights_a = self.get_model_weights(self._model_a_key)
         weights_b = self.get_model_weights(self._model_b_key)
@@ -79,7 +95,7 @@ class TransferExperiment(Experiment):
         results = self._resource_manager.get_existing_results(self._name, results_name)
         if base_name not in results:
             results = {base_name: {self._model_a_key: self.get_model_acc(self._model_a_key, x_test_a, y_test_a),
-                                self._model_b_key: self.get_model_acc(self._model_a_key, x_test_b, y_test_b)}}
+                                self._model_b_key: self.get_model_acc(self._model_b_key, x_test_b, y_test_b)}}
             self._resource_manager.save_results(results, self._name, results_name)
         for layers_to_copy in layers_to_copy_set:
             if self.create_name_from_list("", layers_to_copy) not in results:
@@ -87,20 +103,21 @@ class TransferExperiment(Experiment):
                 abp_name = self.create_name_from_list("abp", layers_to_copy)
                 ba_name = self.create_name_from_list("ba", layers_to_copy)
                 bap_name = self.create_name_from_list("bap", layers_to_copy)
-                curr_weights_a = {i: weights_a[i] for i in weights_a if i in layers_to_copy}
-                curr_weights_b = {i: weights_b[i] for i in weights_b if i in layers_to_copy}
-                ab_trainer = self._trainer_class(dataset=self._data_b, layers_to_freeze=layers_to_copy,
-                                                 weight_map=curr_weights_a, **self._trainer_kwargs)
-                abp_trainer = self._trainer_class(dataset=self._data_b,
-                                                  weight_map=curr_weights_a, **self._trainer_kwargs)
-                ba_trainer = self._trainer_class(dataset=self._data_a, layers_to_freeze=layers_to_copy,
-                                                 weight_map=curr_weights_b, **self._trainer_kwargs)
-                bap_trainer = self._trainer_class(dataset=self._data_a,
-                                                  weight_map=curr_weights_b, **self._trainer_kwargs)
+                layers_to_freeze = list(dict.fromkeys(self._layers_to_freeze + layers_to_copy))
+                ab_trainer = self._trainer_class(dataset=self._data_b, layers_to_freeze=layers_to_freeze,
+                                                 weight_map=weights_a, layers_to_copy=layers_to_copy, **self._trainer_kwargs)
+                abp_trainer = self._trainer_class(dataset=self._data_b, layers_to_copy=layers_to_copy, layers_to_freeze=self._layers_to_freeze,
+                                                  weight_map=weights_a, **self._trainer_kwargs)
+                ba_trainer = self._trainer_class(dataset=self._data_a, layers_to_freeze=layers_to_freeze,
+                                                 weight_map=weights_b, layers_to_copy=layers_to_copy, **self._trainer_kwargs)
+                bap_trainer = self._trainer_class(dataset=self._data_a, layers_to_copy=layers_to_copy, layers_to_freeze=self._layers_to_freeze,
+                                                  weight_map=weights_b, **self._trainer_kwargs)
                 curr_trainers = {ab_name: ab_trainer,
                                  ba_name: ba_trainer,
                                  abp_name: abp_trainer,
                                  bap_name: bap_trainer}
+                for trainer in curr_trainers.values():
+                    self.add_early_stopping_cb(trainer, self._early_patience)
                 model_names = list(curr_trainers.keys())
                 self._model_names.extend(model_names)
                 self._trainers.update(curr_trainers)

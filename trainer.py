@@ -43,7 +43,7 @@ class BaseTrainer(Verbose):
         self._prune_threshold = prune_threshold
         if not math.isnan(prune_threshold):
             assert prune_threshold > 0, "Only non-negative threshold values allowed! Got {}".format(prune_threshold)
-        self._checkpoint_callbacks = []
+        self._callbacks = []
         # Load the data at this point to set the shape
         (self._x_train, self._y_train), (self._x_test, self._y_test) = self._dataset.load_data()
         if normalize_data:
@@ -102,8 +102,8 @@ class BaseTrainer(Verbose):
     def get_prune_threshold(self):
         return self._prune_threshold
 
-    def add_checkpoint_callback(self, callback):
-        self._checkpoint_callbacks.append(callback)
+    def add_callback(self, callback):
+        self._callbacks.append(callback)
 
     def glorot_layer_indices(self):
         x = list(filter(lambda i: self._is_drawn_glorot_uniform(i), self.get_weighted_layers_indices()))
@@ -173,12 +173,11 @@ class BaseTrainer(Verbose):
         for idx in layers_to_freeze:
             layers[idx].trainable = False
 
-    def set_layers_weights(self, layers, weight_map, layers_to_copy=None):
-        if layers_to_copy is None:
-            layers_to_copy = list(weight_map.keys())
+    def set_layers_weights(self, layers, weight_map):
+        layers_to_copy = list(weight_map.keys())
         self.logger.debug("copying layers {}".format(layers_to_copy))
-        for idx in layers_to_copy:
-            layers[idx].set_weights(weight_map[idx])
+        for idx, weights in weight_map.items():
+            layers[idx].set_weights(weights)
 
 
 class FCTrainer(BaseTrainer):
@@ -195,10 +194,6 @@ class FCTrainer(BaseTrainer):
                  output_activation='softmax',
                  optimizer=optimizers.SGD(momentum=0.9, nesterov=True),
                  loss='sparse_categorical_crossentropy',
-                 kernel_reg=None,
-                 bias_reg=None,
-                 activation_reg=None,
-                 reg_penalty_by_layer=None,
                  metrics=None,
                  regularizer=None,
                  regularizer_penalty=0.0,
@@ -249,7 +244,8 @@ class FCTrainer(BaseTrainer):
         input_layer = Input(shape=self._shape)
         layers = [input_layer]
         # Now the rest of the scum:
-        self.logger.debug("Using drop out with ratio={}".format(self._do))
+        if self._do:
+            self.logger.debug("Using drop out with ratio={}".format(self._do))
         for i in range(self._n_layers):
             if self._regularizer:
                 layer = Dense(self._n_neurons, activation=self._activation, kernel_regularizer=self._regularizer)
@@ -305,11 +301,11 @@ class FCTrainer(BaseTrainer):
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
         self.logger.info(model.summary())
         history = model.fit(self._x_train, self._y_train,
-                  shuffle=True,
-                  epochs=self._epochs,
-                  callbacks=self._checkpoint_callbacks,
-                  batch_size=self._batch_size,
-                  validation_data=(self._x_test, self._y_test))
+                            shuffle=True,
+                            epochs=self._epochs,
+                            callbacks=self._callbacks,
+                            batch_size=self._batch_size,
+                            validation_data=(self._x_test, self._y_test))
         return model, history.history
 
 
@@ -320,7 +316,7 @@ class FCFreezeTrainer(FCTrainer):
         freezing and weight initialization.
     """
 
-    def __init__(self, layers_to_freeze=None, weight_map=None, **kwargs):
+    def __init__(self, layers_to_freeze=None, weight_map=None, layers_to_copy=None, **kwargs):
         """
         :param layers_to_freeze: Optional list of layer indexes to set to
             'untrainable', i.e. their weights cannot change during
@@ -328,11 +324,15 @@ class FCFreezeTrainer(FCTrainer):
         :param weight_map: Optional. Maps layer indexes to initial weight
             values to use (instead of random init). Intended for use
             with frozen layers.
+        :param layers_to_copy: Optional list of layer indexes to copy from weight map
         """
         super().__init__(**kwargs)
         weighted_layers = self.get_weighted_layers_indices()
         self._layers_to_freeze = [weighted_layers[i] for i in layers_to_freeze] if layers_to_freeze else []
         self._weight_map = weight_map if weight_map else {}
+        if layers_to_copy and weight_map:
+            layers_to_copy = [weighted_layers[i] for i in layers_to_copy]
+            self._weight_map = {idx: weight_map[idx] for idx in layers_to_copy}
 
     def _train(self):
         layers = self._create_layers()
@@ -343,11 +343,11 @@ class FCFreezeTrainer(FCTrainer):
         self.set_layers_weights(layers, self._weight_map)
         self.logger.info(model.summary())
         history = model.fit(self._x_train, self._y_train,
-                  shuffle=True,
-                  epochs=self._epochs,
-                  callbacks=self._checkpoint_callbacks,
-                  batch_size=self._batch_size,
-                  validation_data=(self._x_test, self._y_test))
+                            shuffle=True,
+                            epochs=self._epochs,
+                            callbacks=self._callbacks,
+                            batch_size=self._batch_size,
+                            validation_data=(self._x_test, self._y_test))
         return model, history.history
 
 
@@ -427,11 +427,11 @@ class VGGTrainer(BaseTrainer):
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
         self.logger.info(model.summary())
         history = model.fit(self._x_train, self._y_train,
-                  shuffle=True,
-                  epochs=self._epochs,
-                  callbacks=self._checkpoint_callbacks,
-                  batch_size=self._batch_size,
-                  validation_data=(self._x_test, self._y_test))
+                            shuffle=True,
+                            epochs=self._epochs,
+                            callbacks=self._callbacks,
+                            batch_size=self._batch_size,
+                            validation_data=(self._x_test, self._y_test))
         return model, history.history
 
     @staticmethod

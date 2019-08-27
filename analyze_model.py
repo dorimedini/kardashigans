@@ -260,7 +260,7 @@ class AnalyzeModel(object):
     @staticmethod
     def generate_transfer_graph(results: dict, output_dir: str, filename="transfer_fig", base_name="base"):
         v = Verbose(name="AnalyzeModel.generate_transfer_graph")
-        for key, val in results.item:
+        for key, val in results.items():
             v.logger.debug("Layer: {}, results {}".format(key, val))
         pyplot.style.use('seaborn-darkgrid')
         palette = pyplot.get_cmap('Set1')
