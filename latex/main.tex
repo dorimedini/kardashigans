@@ -18,10 +18,11 @@
 \newcommand{\theHalgorithm}{\arabic{algorithm}}
 
 % Use the following line for the initial blind version submitted for review:
-% \usepackage{icml2019}
+
+\usepackage[accepted]{icml2019}
 
 % If accepted, instead use the following line for the camera-ready submission:
-\usepackage[accepted]{icml2019}
+%\usepackage[accepted]{icml2019}
 
 % The \icmltitle you define below is probably too long as a header.
 % Therefore, a short form for the running title is supplied here:
@@ -31,6 +32,7 @@
 
 \twocolumn[
 \icmltitle{The Cold Never Bothered Me Anyway: \\On the Robustness of Training with Frozen Layers}
+
 
 \icmlsetsymbol{equal}{*}
 
@@ -47,7 +49,6 @@
 Do we need an abstract?
 \end{abstract}
 \section{Introduction}
-
 We attempt to further investigate the robustness affect.
 \section{Related Work}
 Tackling the question of generalizing well while having a large number of parameters, \cite{intrinsic} found that using a small number of parameters (the \textit{intrinsic dimension}) projected into a larger space using a random matrix can lead to good generalization. \cite{sgdAlign} have studied properties of Gradient Descent algorithm that contribute to generalization.\\
@@ -126,6 +127,7 @@ The same effect occurs when training a 5-layer fully connected network on MNIST,
 \section{Applying robustness effect in transfer learning}
 
 \section{Conclusions and future directions}
+
 \bibliography{main}
 \bibliographystyle{icml2019}
 \end{document}

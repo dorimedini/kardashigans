@@ -1,3 +1,10 @@
+# Kardashinanigans
+latex/*.pdf
+latex/*.aux
+latex/*.out
+latex/*.log
+latex/*.synctex.gz
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
