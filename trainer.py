@@ -43,7 +43,7 @@ class BaseTrainer(Verbose):
         self._prune_threshold = prune_threshold
         if not math.isnan(prune_threshold):
             assert prune_threshold > 0, "Only non-negative threshold values allowed! Got {}".format(prune_threshold)
-        self._checkpoint_callbacks = []
+        self._callbacks = []
         # Load the data at this point to set the shape
         (self._x_train, self._y_train), (self._x_test, self._y_test) = self._dataset.load_data()
         if normalize_data:
@@ -113,8 +113,8 @@ class BaseTrainer(Verbose):
     def get_prune_threshold(self):
         return self._prune_threshold
 
-    def add_checkpoint_callback(self, callback):
-        self._checkpoint_callbacks.append(callback)
+    def add_callback(self, callback):
+        self._callbacks.append(callback)
 
     def _train(self):
         raise NotImplementedError
@@ -129,14 +129,15 @@ class BaseTrainer(Verbose):
         v = Verbose()
         # Layer 0 has no input edges, start from layer 1
         pruned_edges = 0
-        all_pruned_weights = []
+        all_pruned_weights_mask = []
         for i in range(1, len(model.layers)):
             weights = model.layers[i].get_weights()
             input_weights = weights[0]  # weights[1] is the list of node biases
             weighted_threshold = threshold * np.linalg.norm(input_weights)
             # The incoming edge weights of node N is incoming_edge_weights[N]
             pruned_weights = np.where(np.absolute(input_weights) < weighted_threshold, 0, input_weights)
-            all_pruned_weights.append(pruned_weights)
+            pruned_mask = np.where(np.absolute(input_weights) < weighted_threshold, True, False)
+            all_pruned_weights_mask.append(pruned_mask)
             model.layers[i].set_weights([np.array(pruned_weights), weights[1]])
             pruned_this_time = pruned_weights.size - np.count_nonzero(pruned_weights)
             pruned_edges += pruned_this_time
@@ -146,7 +147,7 @@ class BaseTrainer(Verbose):
         percent = (pruned_edges * 100) // total_edges
         v.logger.debug("Pruned a total of {}/{} edges ({}%) (with threshold {})"
                        "".format(pruned_edges, total_edges, percent, threshold))
-        return all_pruned_weights
+        return all_pruned_weights_mask
 
     def _post_train(self, model):
         """ Inheriting classes C should call this method in the overridden _post_train """
@@ -290,11 +291,11 @@ class FCTrainer(BaseTrainer):
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
         self.logger.info(model.summary())
         history = model.fit(self._x_train, self._y_train,
-                  shuffle=True,
-                  epochs=self._epochs,
-                  callbacks=self._checkpoint_callbacks,
-                  batch_size=self._batch_size,
-                  validation_data=(self._x_test, self._y_test))
+                            shuffle=True,
+                            epochs=self._epochs,
+                            callbacks=self._callbacks,
+                            batch_size=self._batch_size,
+                            validation_data=(self._x_test, self._y_test))
         return model, history.history
 
 
@@ -328,11 +329,11 @@ class FCFreezeTrainer(FCTrainer):
         self.set_layers_weights(layers, self._weight_map)
         self.logger.info(model.summary())
         history = model.fit(self._x_train, self._y_train,
-                  shuffle=True,
-                  epochs=self._epochs,
-                  callbacks=self._checkpoint_callbacks,
-                  batch_size=self._batch_size,
-                  validation_data=(self._x_test, self._y_test))
+                            shuffle=True,
+                            epochs=self._epochs,
+                            callbacks=self._callbacks,
+                            batch_size=self._batch_size,
+                            validation_data=(self._x_test, self._y_test))
         return model, history.history
 
 
@@ -409,11 +410,11 @@ class VGGTrainer(BaseTrainer):
         model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
         self.logger.info(model.summary())
         history = model.fit(self._x_train, self._y_train,
-                  shuffle=True,
-                  epochs=self._epochs,
-                  callbacks=self._checkpoint_callbacks,
-                  batch_size=self._batch_size,
-                  validation_data=(self._x_test, self._y_test))
+                            shuffle=True,
+                            epochs=self._epochs,
+                            callbacks=self._callbacks,
+                            batch_size=self._batch_size,
+                            validation_data=(self._x_test, self._y_test))
         return model, history.history
 
     @staticmethod
