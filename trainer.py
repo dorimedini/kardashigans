@@ -1,7 +1,7 @@
 # Save / load / train models.
 from keras import optimizers
 from keras.layers import Input, Dense, Dropout
-from keras.models import Model
+from keras.models import Model, clone_model
 from keras.applications import VGG16, VGG19
 import numpy as np
 import math
@@ -58,21 +58,10 @@ class BaseTrainer(Verbose):
 
     def _normalize_data(self, x_train, y_train, x_test, y_test):
         self.logger.debug("normalizing data.")
-        self.logger.info("Before reshape:")
-        self.logger.info("x_train.shape: {}".format(x_train.shape))
-        self.logger.info("x_test.shape: {}".format(x_test.shape))
-        self.logger.info("y_train.shape: {}".format(y_train.shape))
-        self.logger.info("y_test.shape: {}".format(y_test.shape))
-        self.logger.info("x_train[0][0][0] is {}".format(x_train[0][0][0]))
-        self.logger.info("x_train.astype('float32')[0][0][0] is {}".format(x_train.astype('float32')[0][0][0]))
         x_train = x_train.astype('float32') / 255.
         x_test = x_test.astype('float32') / 255.
-        self.logger.info("x_train[0][0][0] is now {}".format(x_train[0][0][0]))
         x_train = x_train.reshape((len(x_train), np.prod(x_train.shape[1:])))
         x_test = x_test.reshape((len(x_test), np.prod(x_test.shape[1:])))
-        self.logger.info("After reshape:")
-        self.logger.info("x_train.shape: {}".format(x_train.shape))
-        self.logger.info("x_test.shape: {}".format(x_test.shape))
         return (x_train, y_train), (x_test, y_test)
 
     def _connect_layers(self, layers):
@@ -116,24 +105,42 @@ class BaseTrainer(Verbose):
     def add_callback(self, callback):
         self._callbacks.append(callback)
 
+    def glorot_layer_indices(self):
+        x = list(filter(lambda i: self._is_drawn_glorot_uniform(i), self.get_weighted_layers_indices()))
+        self.logger.debug("Glorot layer indices: {}".format(x))
+        return x
+
+    def _is_drawn_glorot_uniform(self, layer_index):
+        # Dense layers should probably return true (see https://keras.io/initializers/#glorot_uniform)
+        raise NotImplementedError
+
     def _train(self):
         raise NotImplementedError
 
     def _prune(self, model):
-        return BaseTrainer.prune_trained_model(model, self._prune_threshold)
+        return BaseTrainer.prune_model(model,
+                                       self._prune_threshold,
+                                       self.get_weighted_layers_indices(),
+                                       self.glorot_layer_indices())
 
     @staticmethod
-    def prune_trained_model(model, threshold):
+    def prune_model(model, threshold, layer_indices, glorot_layer_indices=[]):
         if math.isnan(threshold):
             return
         v = Verbose()
         # Layer 0 has no input edges, start from layer 1
         pruned_edges = 0
         all_pruned_weights_mask = []
-        for i in range(1, len(model.layers)):
+        for i in layer_indices:
             weights = model.layers[i].get_weights()
             input_weights = weights[0]  # weights[1] is the list of node biases
-            weighted_threshold = threshold * np.linalg.norm(input_weights)
+            weighted_threshold = threshold
+            # If weights were sampled using the glorot_uniform option we should probably normalize the threshold by the
+            # interval constant
+            if i in glorot_layer_indices:
+                weighted_threshold *= AnalyzeModel.glorot_constant(model, i)
+            else:
+                weighted_threshold *= np.linalg.norm(input_weights)
             # The incoming edge weights of node N is incoming_edge_weights[N]
             pruned_weights = np.where(np.absolute(input_weights) < weighted_threshold, 0, input_weights)
             pruned_mask = np.where(np.absolute(input_weights) < weighted_threshold, True, False)
@@ -148,6 +155,12 @@ class BaseTrainer(Verbose):
         v.logger.debug("Pruned a total of {}/{} edges ({}%) (with threshold {})"
                        "".format(pruned_edges, total_edges, percent, threshold))
         return all_pruned_weights_mask
+
+    @staticmethod
+    def prune_model_copy(model, threshold, layer_indices, glorot_layer_indices=[]):
+        model_copy = clone_model(model)
+        BaseTrainer.prune_model(model_copy, threshold, layer_indices, glorot_layer_indices=glorot_layer_indices)
+        return model_copy
 
     def _post_train(self, model):
         """ Inheriting classes C should call this method in the overridden _post_train """
@@ -164,12 +177,11 @@ class BaseTrainer(Verbose):
         for idx in layers_to_freeze:
             layers[idx].trainable = False
 
-    def set_layers_weights(self, layers, weight_map, layers_to_copy=None):
-        if layers_to_copy is None:
-            layers_to_copy = list(weight_map.keys())
+    def set_layers_weights(self, layers, weight_map):
+        layers_to_copy = list(weight_map.keys())
         self.logger.debug("copying layers {}".format(layers_to_copy))
-        for idx in layers_to_copy:
-            layers[idx].set_weights(weight_map[idx])
+        for idx, weights in weight_map.items():
+            layers[idx].set_weights(weights)
 
 
 class FCTrainer(BaseTrainer):
@@ -186,10 +198,6 @@ class FCTrainer(BaseTrainer):
                  output_activation='softmax',
                  optimizer=optimizers.SGD(momentum=0.9, nesterov=True),
                  loss='sparse_categorical_crossentropy',
-                 kernel_reg=None,
-                 bias_reg=None,
-                 activation_reg=None,
-                 reg_penalty_by_layer=None,
                  metrics=None,
                  regularizer=None,
                  regularizer_penalty=0.0,
@@ -240,7 +248,8 @@ class FCTrainer(BaseTrainer):
         input_layer = Input(shape=self._shape)
         layers = [input_layer]
         # Now the rest of the scum:
-        self.logger.debug("Using drop out with ratio={}".format(self._do))
+        if self._do:
+            self.logger.debug("Using drop out with ratio={}".format(self._do))
         for i in range(self._n_layers):
             if self._regularizer:
                 layer = Dense(self._n_neurons, activation=self._activation, kernel_regularizer=self._regularizer)
@@ -263,6 +272,11 @@ class FCTrainer(BaseTrainer):
             return range(1, 2 * self.get_n_layers() + 2, 2)
         else:
             return range(1, self.get_n_layers() + 2)
+
+    def _is_drawn_glorot_uniform(self, layer_index):
+        # All weighted layers are Dense. If initializer is provided and not
+        # 'glorot_uniform' then it's not glorot, but by default it is
+        return layer_index in self.get_weighted_layers_indices()
 
     # Given a dataset, constructs a model with the requested parameters
     # and runs it. Also, optionally uses specified
@@ -306,7 +320,7 @@ class FCFreezeTrainer(FCTrainer):
         freezing and weight initialization.
     """
 
-    def __init__(self, layers_to_freeze=None, weight_map=None, **kwargs):
+    def __init__(self, layers_to_freeze=None, weight_map=None, layers_to_copy=None, **kwargs):
         """
         :param layers_to_freeze: Optional list of layer indexes to set to
             'untrainable', i.e. their weights cannot change during
@@ -314,11 +328,15 @@ class FCFreezeTrainer(FCTrainer):
         :param weight_map: Optional. Maps layer indexes to initial weight
             values to use (instead of random init). Intended for use
             with frozen layers.
+        :param layers_to_copy: Optional list of layer indexes to copy from weight map
         """
         super().__init__(**kwargs)
         weighted_layers = self.get_weighted_layers_indices()
         self._layers_to_freeze = [weighted_layers[i] for i in layers_to_freeze] if layers_to_freeze else []
         self._weight_map = weight_map if weight_map else {}
+        if layers_to_copy and weight_map:
+            layers_to_copy = [weighted_layers[i] for i in layers_to_copy]
+            self._weight_map = {idx: weight_map[idx] for idx in layers_to_copy}
 
     def _train(self):
         layers = self._create_layers()
@@ -402,6 +420,9 @@ class VGGTrainer(BaseTrainer):
         except KeyError:
             raise ValueError("VGG size not supported")
         return vgg(weights=self._imagenet_weights, classes=self._n_classes, input_tensor=input_layer)
+
+    def _is_drawn_glorot_uniform(self, layer_index):
+        return False
 
     def _train(self):
         model = self.create_model()

@@ -1,5 +1,9 @@
 # Kardashinanigans
-latex/Globerson_final_project.pdf
+latex/*.pdf
+latex/*.aux
+latex/*.out
+latex/*.log
+latex/*.synctex.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
