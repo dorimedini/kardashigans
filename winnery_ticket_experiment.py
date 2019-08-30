@@ -11,13 +11,13 @@ class ZeroWeightsCallback(Callback):
     def __init__(self, zero_weight_mask, layer_indices):
         super(ZeroWeightsCallback, self).__init__()
         self.zero_weight_mask = zero_weight_mask
-        self.layer_indices
+        self.layer_indices = layer_indices
 
     def _zero_masked_weights(self):
         for i, layer in enumerate(self.layer_indices):
             weights = self.model.layers[layer].get_weights()
             weights[0][self.zero_weight_mask[i]] = 0.0
-            self.model.layers[i].set_weights(weights)
+            self.model.layers[layer].set_weights(weights)
 
     def on_train_begin(self, logs=None):
         self._zero_masked_weights()
@@ -70,14 +70,13 @@ class WinneryTicketExperiment(SimpleExperiment):
         # Setup a new trainer with weights "pruned".
         with self.open_model_at_epoch(self.base_model_key, 'start') as init_model:
             weight_map = {layer: self.get_updated_weights_by_mask(init_model.layers[layer].get_weights(),
-                                                              prunning_mask[i])
+                                                                  prunning_mask[i])
                           for i, layer in enumerate(layer_indices)}
 
         winnery_trainer = self._trainer_class(
             dataset=self.dataset,
             weight_map=weight_map,
             **self.trainer_kwargs)
-
 
         winnery_trainer.add_callback(ZeroWeightsCallback(prunning_mask, layer_indices))
         winnery_key = self.base_model_key + "_winnery"
