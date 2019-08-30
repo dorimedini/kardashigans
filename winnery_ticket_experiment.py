@@ -8,14 +8,15 @@ class ZeroWeightsCallback(Callback):
     This is equivalent to removing the given weights.
     """
 
-    def __init__(self, zero_weight_mask):
+    def __init__(self, zero_weight_mask, layer_indices):
         super(ZeroWeightsCallback, self).__init__()
         self.zero_weight_mask = zero_weight_mask
+        self.layer_indices
 
     def _zero_masked_weights(self):
-        for i in range(1, len(self.model.layers)):
+        for i, layer in enumerate(self.layer_indices):
             weights = self.model.layers[i].get_weights()
-            weights[0][self.zero_weight_mask[i - 1]] = 0.0
+            weights[0][self.zero_weight_mask[i]] = 0.0
             self.model.layers[i].set_weights(weights)
 
     def on_train_begin(self, logs=None):
@@ -60,20 +61,25 @@ class WinneryTicketExperiment(SimpleExperiment):
     def go(self):
         super(WinneryTicketExperiment, self).go()
 
+        base_trainer = self.get_trainer_map()[self.base_model_key]
+        layer_indices = base_trainer.get_weighted_layers_indices()
+
         with self.open_model(self.base_model_key) as trained_model:
-            prunning_mask = BaseTrainer.prune_trained_model(trained_model, self.prune_threshold)
+            prunning_mask = BaseTrainer.prune_model(trained_model, self.prune_threshold, layer_indices)
 
         # Setup a new trainer with weights "pruned".
-        init_model = self._get_model_at_epoch(self.base_model_key, 'start')
-        weight_map = {i: self.get_updated_weights_by_mask(init_model.layers[i].get_weights(),
-                                                          prunning_mask[i - 1])
-                      for i in range(1, len(init_model.layers))}
+        with self.open_model_at_epoch(self.base_model_key, 'start') as init_model:
+            weight_map = {layer: self.get_updated_weights_by_mask(init_model.layers[layer].get_weights(),
+                                                              prunning_mask[i])
+                          for i, layer in enumerate(layer_indices)}
 
         winnery_trainer = self._trainer_class(
             dataset=self.dataset,
             weight_map=weight_map,
             **self.trainer_kwargs)
-        winnery_trainer.add_callback(ZeroWeightsCallback(prunning_mask))
+
+
+        winnery_trainer.add_callback(ZeroWeightsCallback(prunning_mask, layer_indices))
         winnery_key = self.base_model_key + "_winnery"
 
         # Override experiment trainers and train
