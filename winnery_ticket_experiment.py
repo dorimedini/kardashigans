@@ -15,7 +15,7 @@ class ZeroWeightsCallback(Callback):
 
     def _zero_masked_weights(self):
         for i, layer in enumerate(self.layer_indices):
-            weights = self.model.layers[i].get_weights()
+            weights = self.model.layers[layer].get_weights()
             weights[0][self.zero_weight_mask[i]] = 0.0
             self.model.layers[i].set_weights(weights)
 
