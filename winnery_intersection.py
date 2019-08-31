@@ -1,8 +1,8 @@
 from kardashigans.analyze_model import AnalyzeModel
-from kardashigans.baseline import Baseline
 from kardashigans.experiment import Experiment, ExperimentWithCheckpoints
-from kardashigans.trainer import BaseTrainer
+from kardashigans.trainer import BaseTrainer, FCTrainer
 from keras.datasets import mnist, cifar10
+from keras import optimizers
 import math
 import numpy as np
 
@@ -13,29 +13,36 @@ class WinneryIntersection(ExperimentWithCheckpoints):
     of some trained model, and the number of non-zero weights in layer i of
     the winnery lotter ticket.
     """
-    def __init__(self, prune_threshold=0.5, *args, **kwargs):
+    def __init__(self, prune_threshold=0.5, epochs=100, *args, **kwargs):
         assert not math.isnan(prune_threshold) and prune_threshold >= 0, \
             "Must init WinneryIntersection with non-negative float value for pruning threshold"
         self._prune_threshold = prune_threshold
-        mnist_name = WinneryIntersection.get_model_name(Experiment.get_dataset_name(mnist))
-        cifar10_name = WinneryIntersection.get_model_name(Experiment.get_dataset_name(cifar10))
+        self._epochs = epochs
+        mnist_name = self._get_model_name(Experiment.get_dataset_name(mnist))
+        cifar10_name = self._get_model_name(Experiment.get_dataset_name(cifar10))
         super(WinneryIntersection, self).__init__(name='WinneryIntersection',
                                                   model_names=[mnist_name, cifar10_name],
                                                   trainers={
-                                                      mnist_name: WinneryIntersection.construct_dataset_trainer(mnist),
-                                                      cifar10_name: WinneryIntersection.construct_dataset_trainer(cifar10)
+                                                      mnist_name: self._construct_dataset_trainer(mnist),
+                                                      cifar10_name: self._construct_dataset_trainer(cifar10)
                                                   },
                                                   period=[],
                                                   *args, **kwargs)
 
-    @staticmethod
-    def get_model_name(dataset_name):
-        return Baseline.get_model_name(dataset_name)
+    def _get_model_name(self, dataset_name):
+        return "{dataset}_fc{layers}_batch{batch}_epochs{epochs}_{opt}" \
+               "".format(dataset=dataset_name,
+                         layers=3,
+                         batch=32,
+                         epochs=self._epochs,
+                         opt='SGD_moment0.9_NesterovTRUE')
 
-    @staticmethod
-    def construct_dataset_trainer(dataset):
-        # Train without pruning built-in, to compare pre-pruned model
-        return Baseline.construct_dataset_trainer(dataset)
+    def _construct_dataset_trainer(self, dataset):
+        return FCTrainer(dataset=dataset,
+                         epochs=self._epochs,
+                         n_layers=3,
+                         batch_size=32,
+                         optimizer=optimizers.SGD(momentum=0.9, nesterov=True))
 
     def _get_robustness_list(self, trained_model, untrained_model, trainer, test_data):
         return [AnalyzeModel.calc_robustness(test_data=test_data,
