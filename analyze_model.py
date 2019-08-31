@@ -226,7 +226,7 @@ class AnalyzeModel(object):
                      loc='right', fontsize=12, fontweight=0, color='orange')
         pyplot.xlabel("Layer")
         pyplot.figtext(-0.15, 0.1, "Pruned acc: {}\nUnpruned acc: {}".format(pruned_acc, unpruned_acc))
-        pyplot.savefig(os.path.join(output_dir, filename), format='png')
+        pyplot.savefig(os.path.join(output_dir, filename + ".png"), format='png')
 
     @staticmethod
     def get_pruned_percent(model, layer_list=[]):
@@ -255,7 +255,7 @@ class AnalyzeModel(object):
         pyplot.title("Percent of edges pruned by layer\n(output to {})".format(graph_name),
                      loc='right', fontsize=12, fontweight=0, color='orange')
         pyplot.xlabel("Layer")
-        pyplot.savefig(os.path.join(output_dir, filename), format='png')
+        pyplot.savefig(os.path.join(output_dir, filename + ".png"), format='png')
 
     @staticmethod
     def generate_transfer_graph(results: dict, output_dir: str, filename="transfer_fig", base_name="base"):
