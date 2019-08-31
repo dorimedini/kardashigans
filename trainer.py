@@ -130,6 +130,7 @@ class BaseTrainer(Verbose):
         v = Verbose()
         # Layer 0 has no input edges, start from layer 1
         pruned_edges = 0
+        all_pruned_weights_mask = []
         for i in layer_indices:
             weights = model.layers[i].get_weights()
             input_weights = weights[0]  # weights[1] is the list of node biases
@@ -142,6 +143,8 @@ class BaseTrainer(Verbose):
                 weighted_threshold *= np.linalg.norm(input_weights)
             # The incoming edge weights of node N is incoming_edge_weights[N]
             pruned_weights = np.where(np.absolute(input_weights) < weighted_threshold, 0, input_weights)
+            pruned_mask = np.where(np.absolute(input_weights) < weighted_threshold, True, False)
+            all_pruned_weights_mask.append(pruned_mask)
             model.layers[i].set_weights([np.array(pruned_weights), weights[1]])
             pruned_this_time = pruned_weights.size - np.count_nonzero(pruned_weights)
             pruned_edges += pruned_this_time
@@ -151,6 +154,7 @@ class BaseTrainer(Verbose):
         percent = (pruned_edges * 100) // total_edges
         v.logger.debug("Pruned a total of {}/{} edges ({}%) (with threshold {})"
                        "".format(pruned_edges, total_edges, percent, threshold))
+        return all_pruned_weights_mask
 
     @staticmethod
     def prune_model_copy(model, threshold, layer_indices, glorot_layer_indices=[]):

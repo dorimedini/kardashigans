@@ -187,17 +187,17 @@ class ResourceManager(Verbose):
             self.v = Verbose(name=self.__class__.__name__)
 
         def on_train_begin(self, logs=None):
-            filepath = self.filepath_template.format(epoch="start", **logs)
+            filepath = self.filepath_template.format(epoch="start")
             self.model.save(filepath, overwrite=True)
             self.v.logger.debug("saved model to {}".format(filepath))
 
         def on_epoch_end(self, epoch, logs=None):
             if epoch in self.period:
-                filepath = self.filepath_template.format(epoch=epoch, **logs)
+                filepath = self.filepath_template.format(epoch=epoch)
                 self.model.save(filepath, overwrite=True)
                 self.v.logger.debug("saved model to {}".format(filepath))
 
         def on_train_end(self, logs=None):
-            filepath = self.filepath_template.format(epoch="end", **logs)
+            filepath = self.filepath_template.format(epoch="end")
             self.model.save(filepath, overwrite=True)
             self.v.logger.debug("saved model to {}".format(filepath))
