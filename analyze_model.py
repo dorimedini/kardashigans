@@ -205,6 +205,16 @@ class AnalyzeModel(object):
                                graph_name,
                                output_dir,
                                filename):
+        with open(os.path.join(output_dir, filename + "_numeric_results.csv"), 'w') as file:
+            file.write(
+                'Pruned Robustness\n' + ",".join([str(r) for r in pruned_robustness]) + "\n\n" +
+                'Unpruned Robustness\n' + ",".join([str(r) for r in unpruned_robustness]) + "\n\n" +
+                'Winnery Intersection Ratio\n' + ",".join([str(r) for r in winnery_intersection_ratio]) + "\n\n" +
+                'L_2 Norm Differences\n' + ",".join([str(r) for r in l2_diffs]) + "\n\n" +
+                'L_1 Norm Differences\n' + ",".join([str(r) for r in l1_diffs]) + "\n\n" +
+                'L_infinity Norm Differences\n' + ",".join([str(r) for r in linf_diffs]) + "\n\n" +
+                'Pruned Accuracy:,' + str(pruned_acc) + ",Unpruned Accuracy:," + str(unpruned_acc) + "\n"
+            )
         pyplot.style.use('seaborn-darkgrid')
         pyplot.figure()
         palette = pyplot.get_cmap('Set1')
@@ -243,6 +253,11 @@ class AnalyzeModel(object):
                                       graph_name,
                                       output_dir,
                                       filename):
+        with open(os.path.join(output_dir, filename + "_numeric_results.csv"), 'w') as file:
+            file.write(
+                'Untrained Pruned Percent\n' + ",".join([str(p) for p in untrained_pruned_percent]) + "\n\n" +
+                'Trained Pruned Percent\n' + ",".join([str(p) for p in trained_pruned_percent]) + "\n"
+            )
         pyplot.style.use('seaborn-darkgrid')
         pyplot.figure()
         palette = pyplot.get_cmap('Set1')
