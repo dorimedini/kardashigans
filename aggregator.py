@@ -3,9 +3,21 @@ import os
 
 
 class Aggregator(Verbose):
-    def __init__(self, results_paths_list):
+    def __init__(self,
+                 results_paths_list,
+                 single_results_callback=None,
+                 aggregate_results_callback=None):
+        """
+        :param results_paths_list: See generate_paths_from_timespan for an example
+        :param single_results_callback: (str) -> (object). Can replace compute_single_result if you don't want to
+            inherit and implement a new class for a specific aggregator.
+        :param aggregate_results_callback: (dict[str:object]) -> (object). Like single_results_callback, designed to
+            replace aggregate_results.
+        """
         super(Aggregator, self).__init__("Aggregator")
         self._paths = results_paths_list
+        self._single_call = single_results_callback
+        self._aggregate_call = aggregate_results_callback
 
     @staticmethod
     def generate_paths_from_timespan(experiment_dir_name,
@@ -66,6 +78,8 @@ class Aggregator(Verbose):
         :param result_path: A string, fully qualified path to directory in which the resources reside.
         :return: Any object
         """
+        if self._single_call:
+            return self._single_call(result_path)
         raise NotImplementedError
 
     def aggregate_results(self, results_list):
@@ -73,6 +87,8 @@ class Aggregator(Verbose):
         :param results_list: A dictionary keyed by paths containing the data computed in compute_single_result
         :return: The aggregated data
         """
+        if self._aggregate_call:
+            return self._aggregate_call(results_list)
         raise NotImplementedError
 
     def go(self):
