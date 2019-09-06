@@ -337,7 +337,8 @@ class FCFreezeTrainer(FCTrainer):
         self._layers_to_freeze = layers_to_freeze if layers_to_freeze else []
         self._weight_map = weight_map if weight_map else {}
         if layers_to_copy and weight_map:
-            layers_to_copy = [weighted_layers[i] for i in layers_to_copy]
+            assert set(layers_to_copy) <= set(weighted_layers), \
+                "Input layers_to_copy list must be contained in {}".format(weighted_layers)
             self._weight_map = {idx: weight_map[idx] for idx in layers_to_copy}
 
     def _train(self):
