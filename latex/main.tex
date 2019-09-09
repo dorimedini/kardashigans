@@ -66,7 +66,7 @@ As mentioned, \cite{allLayers} have studied the role of different layers. By re-
 Others have studied "freezing" weights: fixing a subset of the weights, and training the rest of the network normally. \cite{freezeout} used layer freezing in order to accelerate training. \cite{fixLastLayerToHadamard} have shown that using a fixed Hadamard matrix as the last layer do not decrease performance. Later, \cite{learningNothing} fixed the majority of network parameters, while still preserving high accuracy. 
 
 \section{Setting} \label{setting}
-We follow the same framework as \cite{allLayers}, to analyze the behaviour of different layers. We trained various types of neural networks with stochastic gradient descent for 100 epochs. All network weights are initialized randomly (TODO: distribution?). After a model is trained, we measure robustness of individual layers by the following two procedures:\\
+We follow the same framework as \cite{allLayers}, to analyze the behaviour of different layers. We trained various types of neural networks with stochastic gradient descent for 100 epochs. All network weights are initialized randomly (the weights of FC networks are drawn using Glorot initialization). After a model is trained, we measure robustness of individual layers by the following two procedures:\\
 \emph{Re-initialization:} Setting a layer's weights to a given epoch's weights, and not modifying the other layer's weights. We measure robustness to re-initialization by the change in test accuracy before and after re-initialization, without any further training or tuning of network parameters. A layer that is highly sensitive to re-initialization is said to be \emph{critical}, and a layer that is not very sensitive to this procedure is called \emph{ambient}. While these aren't well-defined terms, there is no ambiguity in classifying layers in the empirical results. \\
 \emph{Re-randomization:} Re-sampling random values to a layer's weights, from the same initial distribution. \\
 \begin{figure}
@@ -75,7 +75,7 @@ We follow the same framework as \cite{allLayers}, to analyze the behaviour of di
   \label{fig:baseline_fc3_heatmap}
 \end{figure}
 Figure \ref{fig:baseline_fc3_heatmap} demonstrates robustness measurements on a baseline model, 3 layered fully connected network (FCN 3) on MNIST. As in \cite{allLayers}, we can see that the bottom (first) layer is critical and is most sensitive to  re-initialization. The rest of layers are ambient, and are not as sensitive. Re-randomization of all layers decreases performance (test accuracy) severely.\\
-Our experiments involve \emph{layer freezing}: fixing layer weights throughout training. TODO: elaborate. what happens to gradients?\\
+Our experiments involve \emph{layer freezing}: fixing layer weights throughout training. More specifically, after initialization of the network and before training, we choose layers whose weights we fix to their initial values while the other layers' weights may change while training. what happens to gradients?\\
 All our experiments were performed in Tensorflow \cite{tensorflow2015-whitepaper}, TODO: any other information? CPU-GPU, types..\\
 TODO: type of networks trained, datasets, optimizers, loss....
 
