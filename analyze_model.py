@@ -236,7 +236,7 @@ class AnalyzeModel(object):
                      loc='right', fontsize=12, fontweight=0, color='orange')
         pyplot.xlabel("Layer")
         pyplot.figtext(-0.15, 0.1, "Pruned acc: {}\nUnpruned acc: {}".format(pruned_acc, unpruned_acc))
-        pyplot.savefig(os.path.join(output_dir, filename + ".png"), format='png')
+        pyplot.savefig(os.path.join(output_dir, filename + ".png"), format='png', bbox_inches="tight")
 
     @staticmethod
     def get_pruned_percent(model, layer_list=[]):

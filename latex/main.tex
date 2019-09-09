@@ -7,6 +7,7 @@
 \usepackage{subfigure}
 \usepackage{booktabs} % for professional tables
 \usepackage{makecell}
+\usepackage{amssymb}
 
 % hyperref makes hyperlinks in the resulting PDF.
 % If your build breaks (sometimes temporarily if a hyperlink spans a page)
@@ -151,8 +152,14 @@ L2 regularization seems to have a smoothing effect (figure \ref{fig:fc3_l2_drop_
 \section{Robustness and the lottery ticket hypothesis} \label{winnerySection}
     
 In \cite{frankle2018lottery}, using pruning techniques they isolated a well initialized sub-network that trains faster and even achieves better results on data, a \emph{winning ticket}. \cite{allLayers}, on the other hand, show that layers differ in their sensitivity to initialization. We wanted to investigate the relationship between the two: is a weight in a critical or an ambient layer is more likely to be a part of a winning ticket? Also, since a winning ticket has better initialization, does it have different robustness pattern? \\
-As in \cite{frankle2018lottery}, we used pruning to reveal the winning ticket from a trained model, removing any weight that's larger than a threshold (TODO: threshold? how was it chosen?). After pruning, we re-initialized the remaining weights and trained the pruned model. TODO: say we validated and indeed this trains faster and stuff.\\
-TODO: correlation.\\
+As in \cite{frankle2018lottery}, we used pruning to reveal the winning ticket from a trained model, removing any weight that's larger than a certain threshold. The threshold constant itself was chosen s.t. a non-negligible portion of weights were pruned and the accuracy changed by $\lessapprox 1\%$; and as the weights were drawn using Glorot initialization the threshold was multiplied by $\sqrt{\frac{2}{fanin + fanout}}$ when pruning a specific layer. After pruning, we re-initialized the remaining weights, trained the pruned model and successfully replicated the results of \cite{frankle2018lottery}. TODO: Show learn-time improvement graph if we need to write more?\\
+To test possible correlation between the winning lottery ticket and layer robustness, we trained a FC3 model on MNIST and measured the percentage of "winning edges" in each layer (formally, if $N$ is the trained network, $N(i)$ is layer $i$ and $W\subseteq N$ is the winning ticket, we measured $\frac{|W\cap N(i)|}{|N(i)|}$ for every $i$).\\
+\begin{figure}
+  \includegraphics[width=\linewidth]{images/mnist_fc3_robustness_winnery_correlation.png}
+  \label{fig:winnery_robustness_correlation}
+  \includegraphics[width=\linewidth]{images/cifar10_fc3_robustness_winnery_correlation.png}
+    \caption{Robustness of the pruned layers alongside the size of the intersection with the winning ticket (ratio). Robustness of the unpruned model is almost identical to the pruned robustness (displayed). MNIST accuracy drops from $0.9853$ to $0.9782$ after pruning, and CIFAR10 accuracy drops from $0.4911$ to $0.4794$.}
+\end{figure}
 While these result seem to show there is no relation between the two phenomenons, examining the robustness patterns on a baseline model (figure \ref{fig:baseline_fc3_heatmap}) and a winning ticket (figure \ref{fig:winnery_robustness}) seem to show an interesting behaviour: Re-initializing the bottom layer on the baseline model drops test accuracy by a 51\%, where on the winning ticket (after pruning) there is a much smaller drop in performance: 25.6\% only. To validate this isn't simply a result of re-initializing a smaller number of weights after pruning, we also pruned the same amount of weights, this time drawn uniformly at random (figure \ref{fig:winnery_robustness}). Random pruning results in a similar robustness pattern as the baseline model (drop in 46\%).\\
 This might be since a winning ticket contains a set of well-initialized weights, so that re-initializing weights hurt performance much less than the baseline, and a randomly pruned network.
 \begin{figure}
