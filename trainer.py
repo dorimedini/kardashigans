@@ -1,6 +1,6 @@
 # Save / load / train models.
 from keras import optimizers
-from keras.layers import Input, Dense, Dropout
+from keras.layers import Input, Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling2D
 from keras.models import Model, clone_model
 from keras.applications import VGG16, VGG19
 import numpy as np
@@ -8,6 +8,7 @@ import math
 from kardashigans.analyze_model import AnalyzeModel
 from kardashigans.verbose import Verbose
 from keras import regularizers
+from keras.models import Sequential
 
 
 class BaseTrainer(Verbose):
@@ -260,7 +261,8 @@ class FCTrainer(BaseTrainer):
                 do_layer = Dropout(rate=self._do)
                 layers += [do_layer]
         if self._regularizer:
-            output_layer = Dense(self._n_classes, activation=self._output_activation, kernel_regularizer=self._regularizer)
+            output_layer = Dense(self._n_classes, activation=self._output_activation,
+                                 kernel_regularizer=self._regularizer)
         else:
             output_layer = Dense(self._n_classes, activation=self._output_activation)
         layers += [output_layer]
@@ -438,8 +440,8 @@ class VGGTrainer(BaseTrainer):
                             validation_data=(self._x_test, self._y_test))
         return model, history.history
 
-    @staticmethod
-    def get_supported_models():
+    @classmethod
+    def get_supported_models(cls):
         """
         :return: model factory and weighted layers indices list per vgg_size
 
@@ -448,3 +450,105 @@ class VGGTrainer(BaseTrainer):
             16: (VGG16, [1, 2, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 17, 20, 21, 22]),
             19: (VGG19, [1, 2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18, 19, 20, 23, 24, 25])
         }
+
+
+class CNNTrainer(BaseTrainer):
+    """ Trains a simple CNN on the dataset """
+
+    def __init__(self,
+                 dataset,
+                 n_classes=10,
+                 epochs=100,
+                 batch_size=32,
+                 optimizer=optimizers.rmsprop(lr=0.0001, decay=1e-6),
+                 loss='sparse_categorical_crossentropy',
+                 metrics=None,
+                 layers_to_freeze=None,
+                 layers_to_copy=None,
+                 weight_map=None,
+                 **kwargs):
+        """
+        :param dataset: Keras dataset
+        :param n_classes: Number of output classes
+        :param epochs: Number of train Epochs
+        :param batch_size: Size of train batches
+        :param optimizer: Optimizer used for training
+        :param loss: Type of loss to use
+        :param metrics: Metrics for evaluation : List
+        :param layers_to_freeze: Optional list of layer indexes to set to
+            'untrainable', i.e. their weights cannot change during
+            training.
+        :param weight_map: Optional. Maps layer indexes to initial weight
+            values to use (instead of random init). Intended for use
+            with frozen layers.
+        """
+        super().__init__(dataset=dataset,
+                         n_layers=None,
+                         batch_size=batch_size,
+                         epochs=epochs,
+                         normalize_data=False,
+                         **kwargs)
+
+        self._n_classes = n_classes
+        self._optimizer = optimizer
+        self._loss = loss
+        self._metrics = metrics if metrics else ['accuracy']
+        self._layers_to_freeze = layers_to_freeze if layers_to_freeze else []
+        self._weight_map = weight_map if weight_map else {}
+        weighted_layers = self.get_weighted_layers_indices()
+        self._layers_to_freeze = [weighted_layers[i] for i in layers_to_freeze] if layers_to_freeze else []
+        self._weight_map = weight_map if weight_map else {}
+        if layers_to_copy and weight_map:
+            layers_to_copy = [weighted_layers[i] for i in layers_to_copy]
+            self._weight_map = {idx: weight_map[idx] for idx in layers_to_copy}
+
+    def create_model(self):
+        """
+        Based on https://keras.io/examples/cifar10_cnn/
+        :return: alexnet model
+        """
+        model = Sequential()
+        model.add(Conv2D(32, (3, 3), padding='same',
+                         input_shape=self._shape))
+        model.add(Activation('relu'))
+        model.add(Conv2D(32, (3, 3)))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Conv2D(64, (3, 3), padding='same'))
+        model.add(Activation('relu'))
+        model.add(Conv2D(64, (3, 3)))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Flatten())
+        model.add(Dense(512))
+        model.add(Activation('relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(self._n_classes))
+        model.add(Activation('softmax'))
+
+        return model
+
+    @classmethod
+    def get_weighted_layers_indices(cls):
+        return [0, 2, 6, 8, 13, 16]
+
+    def _is_drawn_glorot_uniform(self, layer_index):
+        return False
+
+    def _train(self):
+        model = self.create_model()
+        self.set_layers_weights(model.layers, self._weight_map)
+        self.freeze_layers(model.layers, self._layers_to_freeze)
+        model.compile(optimizer=self._optimizer, loss=self._loss, metrics=self._metrics)
+        self.logger.info(model.summary())
+        history = model.fit(self._x_train, self._y_train,
+                            shuffle=True,
+                            epochs=self._epochs,
+                            callbacks=self._callbacks,
+                            batch_size=self._batch_size,
+                            validation_data=(self._x_test, self._y_test))
+        return model, history.history
